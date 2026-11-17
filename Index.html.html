@@ -1,0 +1,3038 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MineTech Fleet & CPE Inventory System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js untuk Visualisasi Dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (XLSX) untuk Import & Template Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        mine: {
+                            950: '#090d16',
+                            900: '#0f172a',
+                            800: '#1e293b',
+                            700: '#334155',
+                            amber: '#f59e0b',
+                            amberHover: '#d97706',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html {
+            font-size: 13.5px;
+        }
+        /* Custom Scrollbar untuk tampilan industrial modern */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f59e0b;
+        }
+        .glass-card {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* --- VISUAL EFFECTS & MICRO-INTERACTIONS --- */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+                radial-gradient(circle at 12% 14%, rgba(245, 158, 11, 0.08), transparent 34%),
+                radial-gradient(circle at 88% 18%, rgba(6, 182, 212, 0.07), transparent 36%),
+                radial-gradient(circle at 50% 92%, rgba(16, 185, 129, 0.06), transparent 40%),
+                radial-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 100% 100%, 22px 22px;
+        }
+
+        header, main {
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes sectionReveal {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.992);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes modalPopIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(22px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        @keyframes progressShimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        section:not(.hidden) {
+            animation: sectionReveal 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        /* Kartu KPI & Panel Interaktif */
+        #view-dashboard .grid > div,
+        #view-population .grid > div,
+        #view-units .grid > div,
+        #view-cpe .grid > div {
+            transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                        box-shadow 0.24s ease,
+                        border-color 0.24s ease;
+        }
+
+        #view-dashboard .grid > div:hover,
+        #view-population .grid > div:hover,
+        #view-units .grid > div:hover,
+        #view-cpe .grid > div:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 26px -10px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(245, 158, 11, 0.16);
+        }
+
+        /* Shimmer pada Progress Bar Maintenance */
+        #bar-maint-done {
+            background-image: linear-gradient(
+                90deg,
+                #14b8a6 0%,
+                #5eead4 50%,
+                #14b8a6 100%
+            );
+            background-size: 200% 100%;
+            animation: progressShimmer 2.6s linear infinite;
+        }
+
+        /* Efek Baris Tabel & Tombol */
+        tbody tr {
+            transition: background-color 0.18s ease, transform 0.18s ease;
+        }
+
+        tbody tr:hover {
+            background-color: rgba(245, 158, 11, 0.045);
+        }
+
+        button {
+            transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        /* Animasi Modal & Toast */
+        #unitModal:not(.hidden) > div,
+        #cpeModal:not(.hidden) > div,
+        #deleteModal:not(.hidden) > div,
+        #importModal:not(.hidden) > div,
+        #gsheetModal:not(.hidden) > div {
+            animation: modalPopIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        #toast-container > div {
+            animation: toastSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        /* Glow halus saat fokus pada input/select/textarea */
+        input:focus, select:focus, textarea:focus {
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-mine-950 text-slate-800 dark:text-slate-100 font-sans text-xs sm:text-[13px] antialiased transition-colors duration-200 min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-30 bg-white/90 dark:bg-mine-900/90 glass-card border-b border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="max-w-7xl mx-auto px-3 sm:px-5 h-13 py-2 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
+                    <i class="fa-solid fa-truck-monster text-sm"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-sm sm:text-base tracking-tight leading-none flex items-center gap-1.5">
+                        MINETECH <span class="text-amber-500">FMS</span>
+                        <span class="hidden sm:inline-block text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">Pit Ops v2.4</span>
+                    </h1>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Inventaris Unit Tambang & Telemetry CPE</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs (Desktop) -->
+            <nav class="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-mine-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="nav-btn px-3 py-1 rounded-md text-xs font-medium transition-all bg-white dark:bg-mine-900 text-amber-600 dark:text-amber-400 shadow-sm">
+                    <i class="fa-solid fa-chart-pie mr-1"></i>Dashboard
+                </button>
+                <button onclick="switchTab('population')" id="tab-population" class="nav-btn px-3 py-1 rounded-md text-xs font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                    <i class="fa-solid fa-truck-monster mr-1"></i>Populasi Unit
+                </button>
+                <button onclick="switchTab('units')" id="tab-units" class="nav-btn px-3 py-1 rounded-md text-xs font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                    <i class="fa-solid fa-clipboard-check mr-1"></i>Status Maintenance
+                </button>
+                <button onclick="switchTab('logs')" id="tab-logs" class="nav-btn px-3 py-1 rounded-md text-xs font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                    <i class="fa-solid fa-clock-rotate-left mr-1"></i>Log Maintenance
+                </button>
+                <button onclick="switchTab('cpe')" id="tab-cpe" class="nav-btn px-3 py-1 rounded-md text-xs font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                    <i class="fa-solid fa-satellite-dish mr-1"></i>Inventaris CPE
+                </button>
+            </nav>
+
+            <!-- Action Controls -->
+            <div class="flex items-center gap-1.5">
+                <button onclick="copyShareableLink()" id="btn-share-link" title="Salin Link Akses agar Semua Perangkat Otomatis Terhubung & Terbaharui" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition text-xs flex items-center gap-1.5 font-semibold">
+                    <i class="fa-solid fa-share-nodes"></i>
+                    <span class="hidden sm:inline">Bagikan Link</span>
+                </button>
+                <button onclick="openModal('gsheetModal')" id="btn-gsheet-header" title="Sinkronisasi Otomatis Google Spreadsheet" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition text-xs flex items-center gap-1.5">
+                    <span id="gsheet-status-dot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                    <i class="fa-solid fa-table text-emerald-500"></i>
+                    <span id="gsheet-header-label" class="hidden xl:inline font-medium">Google Sheets</span>
+                </button>
+                <button onclick="openModal('importModal')" title="Import Data Excel / CSV" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition text-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-excel text-emerald-500"></i>
+                    <span class="hidden lg:inline font-medium">Import Excel</span>
+                </button>
+                <button onclick="exportToCSV()" title="Export Laporan CSV" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition text-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-csv text-cyan-500"></i>
+                    <span class="hidden lg:inline font-medium">Export CSV</span>
+                </button>
+                <button onclick="toggleTheme()" title="Ganti Tema" class="p-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition text-xs">
+                    <i id="theme-icon" class="fa-solid fa-sun text-amber-400"></i>
+                </button>
+                <button onclick="openModal('unitModal')" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold text-xs shadow-md shadow-amber-500/20 transition flex items-center gap-1">
+                    <i class="fa-solid fa-plus"></i>
+                    <span class="hidden sm:inline">Tambah Unit</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation Bar -->
+        <div class="flex md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-mine-900 px-2 py-1 gap-1">
+            <button onclick="switchTab('dashboard')" id="mob-tab-dashboard" class="mob-nav-btn flex-1 py-1 rounded-md text-[11px] font-semibold bg-amber-500/10 text-amber-500">
+                <i class="fa-solid fa-chart-pie block mb-0.5"></i>Dashboard
+            </button>
+            <button onclick="switchTab('population')" id="mob-tab-population" class="mob-nav-btn flex-1 py-1 rounded-md text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                <i class="fa-solid fa-truck-monster block mb-0.5"></i>Populasi
+            </button>
+            <button onclick="switchTab('units')" id="mob-tab-units" class="mob-nav-btn flex-1 py-1 rounded-md text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                <i class="fa-solid fa-clipboard-check block mb-0.5"></i>Status
+            </button>
+            <button onclick="switchTab('logs')" id="mob-tab-logs" class="mob-nav-btn flex-1 py-1 rounded-md text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                <i class="fa-solid fa-clock-rotate-left block mb-0.5"></i>Log
+            </button>
+            <button onclick="switchTab('cpe')" id="mob-tab-cpe" class="mob-nav-btn flex-1 py-1 rounded-md text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                <i class="fa-solid fa-satellite-dish block mb-0.5"></i>Stok CPE
+            </button>
+        </div>
+    </header>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="fixed bottom-3 right-3 z-50 flex flex-col gap-1.5 pointer-events-none"></div>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-5 py-4 space-y-4">
+
+        <!-- ==================== SECTION 1: DASHBOARD ==================== -->
+        <section id="view-dashboard" class="space-y-4">
+            <!-- Banner Status Operasi -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white dark:bg-mine-900 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div>
+                    <h2 class="text-sm font-bold flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Ringkasan Operasional Tambang & Telemetry
+                    </h2>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">Update real-time populasi alat berat, kesiapan perangkat CPE, dan progres jadwal maintenance.</p>
+                </div>
+                <div class="flex items-center gap-1.5 text-[11px] font-mono bg-slate-100 dark:bg-mine-800 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <i class="fa-regular fa-clock text-amber-500"></i>
+                    <span id="live-clock">Memuat waktu...</span>
+                </div>
+            </div>
+
+            <!-- KPI Cards Grid (8 Indikator Utama) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- 1. Total Populasi -->
+                <div onclick="filterPopulationAndJump('all')" class="cursor-pointer group bg-white dark:bg-mine-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition shadow-sm relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Populasi Unit</p>
+                            <h3 id="kpi-total-pop" class="text-2xl font-extrabold mt-1 font-mono">0</h3>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                                <span class="text-amber-500 font-medium">Active + CPE Ready + CPE Rusak</span>
+                            </p>
+                        </div>
+                        <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center text-sm group-hover:scale-110 transition">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Populasi Active -->
+                <div onclick="filterPopulationAndJump('Active')" class="cursor-pointer group bg-white dark:bg-mine-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 transition shadow-sm relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Populasi Active</p>
+                            <h3 id="kpi-active-pop" class="text-2xl font-extrabold mt-1 font-mono text-emerald-500">0</h3>
+                            <p id="kpi-active-pct" class="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-medium">0% Physical Availability</p>
+                        </div>
+                        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-sm group-hover:scale-110 transition">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Stok CPE Ready -->
+                <div onclick="switchTab('cpe')" class="cursor-pointer group bg-white dark:bg-mine-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-cyan-500/50 transition shadow-sm relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Stok CPE Ready</p>
+                            <h3 id="kpi-cpe-ready" class="text-2xl font-extrabold mt-1 font-mono text-cyan-500">0</h3>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Siap pasang di gudang IT/Radio</p>
+                        </div>
+                        <div class="w-9 h-9 rounded-lg bg-cyan-500/10 text-cyan-500 flex items-center justify-center text-sm group-hover:scale-110 transition">
+                            <i class="fa-solid fa-wifi"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. CPE Rusak -->
+                <div onclick="switchTab('cpe')" class="cursor-pointer group bg-white dark:bg-mine-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-rose-500/50 transition shadow-sm relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">CPE Rusak / RMA</p>
+                            <h3 id="kpi-cpe-broken" class="text-2xl font-extrabold mt-1 font-mono text-rose-500">0</h3>
+                            <p class="text-[11px] text-rose-500/80 mt-1">Perlu perbaikan / klaim garansi</p>
+                        </div>
+                        <div class="w-9 h-9 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center text-sm group-hover:scale-110 transition">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Jumlah Sudah Maintenance -->
+                <div onclick="filterAndJump('sudah')" class="cursor-pointer group bg-white dark:bg-mine-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-teal-500/50 transition shadow-sm">
+                    <div class="flex justify-between items-start">
+                        <div class="w-full pr-2">
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Sudah Maintenance</p>
+                            <h3 id="kpi-maint-done" class="text-2xl font-extrabold mt-1 font-mono text-teal-500">0</h3>
+                            <div class="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full mt-2 overflow-hidden">
+                                <div id="bar-maint-done" class="bg-teal-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="w-9 h-9 shrink-0 rounded-lg bg-teal-500/10 text-teal-500 flex items-center justify-center text-sm group-hover:scale-110 transition">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Jumlah Belum Maintenance -->
+                <div onclick="filterAndJump('belum')" class="cursor-pointer group bg-white dark:bg-mine-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition shadow-sm">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Belum Maintenance</p>
+                            <h3 id="kpi-maint-pending" class="text-2xl font-extrabold mt-1 font-mono text-amber-500">0</h3>
+                            <p id="kpi-maint-pending-pct" class="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium">0% Backlog / Antrian</p>
+                        </div>
+                        <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center text-sm group-hover:scale-110 transition">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. Breakdown Kategori Maintenance (Card Lebar 2 Kolom) -->
+                <div class="sm:col-span-2 bg-white dark:bg-mine-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                            <i class="fa-solid fa-wrench text-amber-500 mr-1"></i>Breakdown Aktivitas Maintenance
+                        </p>
+                        <button onclick="switchTab('units')" class="text-[11px] text-amber-500 hover:underline font-medium">Lihat Detail &rarr;</button>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        <div onclick="filterAndJump('sudah')" class="cursor-pointer px-2.5 py-2 rounded-lg bg-slate-50 dark:bg-mine-800/80 border border-slate-200/80 dark:border-slate-700/80 hover:border-blue-500 transition">
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 block">Preventive</span>
+                            <span id="kpi-type-preventive" class="text-base font-bold font-mono text-blue-500 block">0</span>
+                        </div>
+                        <div onclick="filterAndJump('Installasi')" class="cursor-pointer px-2.5 py-2 rounded-lg bg-slate-50 dark:bg-mine-800/80 border border-slate-200/80 dark:border-slate-700/80 hover:border-emerald-500 transition">
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 block">Installasi</span>
+                            <span id="kpi-type-installasi" class="text-base font-bold font-mono text-emerald-500 block">0</span>
+                        </div>
+                        <div onclick="filterAndJump('Dismantle')" class="cursor-pointer px-2.5 py-2 rounded-lg bg-slate-50 dark:bg-mine-800/80 border border-slate-200/80 dark:border-slate-700/80 hover:border-purple-500 transition">
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 block">Dismantle</span>
+                            <span id="kpi-type-dismantle" class="text-base font-bold font-mono text-purple-500 block">0</span>
+                        </div>
+                        <div onclick="filterAndJump('Troubleshoot')" class="cursor-pointer px-2.5 py-2 rounded-lg bg-slate-50 dark:bg-mine-800/80 border border-slate-200/80 dark:border-slate-700/80 hover:border-rose-500 transition">
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 block">Troubleshoot</span>
+                            <span id="kpi-type-troubleshoot" class="text-base font-bold font-mono text-rose-500 block">0</span>
+                        </div>
+                        <div onclick="filterAndJump('Replace CPE')" class="cursor-pointer px-2.5 py-2 rounded-lg bg-slate-50 dark:bg-mine-800/80 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-500 transition">
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 block">Replace CPE</span>
+                            <span id="kpi-type-replace" class="text-base font-bold font-mono text-amber-500 block">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts & Recent Logs Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <!-- Chart 1: Statistik Maintenance & Status -->
+                <div class="bg-white dark:bg-mine-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <h3 class="text-xs font-bold mb-3 flex items-center justify-between">
+                        <span>Distribusi Jenis Maintenance</span>
+                        <span class="text-[11px] font-normal text-slate-400">Unit Terdata</span>
+                    </h3>
+                    <div class="relative h-48 w-full flex items-center justify-center">
+                        <canvas id="maintenanceChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Kesiapan Populasi & Stok CPE -->
+                <div class="bg-white dark:bg-mine-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <h3 class="text-xs font-bold mb-3 flex items-center justify-between">
+                        <span>Status Populasi & Perangkat CPE</span>
+                        <span class="text-[11px] font-normal text-slate-400">Real-time</span>
+                    </h3>
+                    <div class="relative h-48 w-full flex items-center justify-center">
+                        <canvas id="cpeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Log Aktivitas Terbaru -->
+                <div class="bg-white dark:bg-mine-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+                    <div class="flex items-center justify-between mb-2.5">
+                        <h3 class="text-xs font-bold">Log Maintenance Terbaru</h3>
+                        <button onclick="switchTab('logs')" class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 font-medium transition">Lihat Semua Log &rarr;</button>
+                    </div>
+                    <div id="recent-logs-list" class="flex-1 space-y-2 overflow-y-auto max-h-48 pr-1">
+                        <!-- Diisi via JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECTION 2A: DAFTAR POPULASI UNIT ==================== -->
+        <section id="view-population" class="hidden space-y-3.5">
+            <!-- Summary Strip Populasi -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="bg-white dark:bg-mine-900 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Total Unit Terdaftar</span>
+                        <h4 id="pop-summary-total" class="text-xl font-bold font-mono mt-0.5">0</h4>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 text-sm">
+                        <i class="fa-solid fa-truck-monster"></i>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-mine-900 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Populasi Active (Operasi)</span>
+                        <h4 id="pop-summary-active" class="text-xl font-bold font-mono text-emerald-500 mt-0.5">0</h4>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-sm">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-mine-900 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Unit Standby / Dismantle</span>
+                        <h4 id="pop-summary-standby" class="text-xl font-bold font-mono text-slate-400 mt-0.5">0</h4>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-slate-500/10 flex items-center justify-center text-slate-400 text-sm">
+                        <i class="fa-solid fa-pause-circle"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header & Filter Controls Populasi -->
+            <div class="bg-white dark:bg-mine-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+                    <div>
+                        <h2 class="text-sm font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-truck-monster text-emerald-500"></i>
+                            <span>Daftar Populasi Unit Tambang</span>
+                            <span id="pop-realtime-badge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-slate-500/30">Offline Lokal</span>
+                        </h2>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">Daftar armada alat berat beserta perangkat CPE, Serial Number, IP Address, dan MSISDN yang terpasang (Auto-Sync Real-Time ke Google Sheets).</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <button onclick="switchTab('units')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-amber-500/15 text-slate-600 dark:text-slate-300 hover:text-amber-500 border border-slate-200 dark:border-slate-700 font-medium text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-screwdriver-wrench"></i> Lihat Status Maintenance &rarr;
+                        </button>
+                        <button id="btn-bulk-delete-pop" onclick="confirmBulkDelete('pop')" class="hidden px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/30 font-semibold text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-trash-can"></i> Hapus Terpilih (<span id="count-selected-pop">0</span>)
+                        </button>
+                        <button onclick="confirmClearAll('unit')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-rose-500/15 text-slate-600 dark:text-slate-300 hover:text-rose-500 border border-slate-200 dark:border-slate-700 font-medium text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-broom"></i> Hapus Semua Populasi
+                        </button>
+                        <button onclick="openModal('unitModal')" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold text-xs transition flex items-center gap-1.5 shadow-sm shadow-amber-500/10">
+                            <i class="fa-solid fa-plus"></i> Tambah Unit Baru
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter Bar Populasi -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]"></i>
+                        <input type="text" id="search-population" oninput="renderPopulationTable()" placeholder="Cari CN Unit, Tipe Unit, SN, IP Address, MSISDN..." class="w-full pl-8 pr-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                    </div>
+                    <select id="filter-population-status" onchange="renderPopulationTable()" class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                        <option value="all">Semua Status Unit</option>
+                        <option value="Active">Populasi Active</option>
+                        <option value="Standby">Standby / Non-Active</option>
+                    </select>
+                    <select id="filter-population-type" onchange="renderPopulationTable()" class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                        <option value="all">Semua Tipe Unit</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabel Populasi Unit -->
+            <div class="bg-white dark:bg-mine-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 dark:bg-mine-800/80 border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                <th class="py-2.5 px-3 w-8">
+                                    <input type="checkbox" id="select-all-pop" onchange="toggleSelectAll('pop', this.checked)" class="rounded border-slate-300 dark:border-slate-600 text-amber-500 focus:ring-amber-500 cursor-pointer">
+                                </th>
+                                <th class="py-2.5 px-3">CN Unit</th>
+                                <th class="py-2.5 px-3">Tipe Unit</th>
+                                <th class="py-2.5 px-3">Status Unit</th>
+                                <th class="py-2.5 px-3">Type CPE Terpasang</th>
+                                <th class="py-2.5 px-3">Serial Number</th>
+                                <th class="py-2.5 px-3">IP Address</th>
+                                <th class="py-2.5 px-3">MSISDN</th>
+                                <th class="py-2.5 px-3">Update Terakhir</th>
+                                <th class="py-2.5 px-3 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="population-table-body" class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                            <!-- Diisi via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="empty-population-state" class="hidden py-8 text-center">
+                    <i class="fa-solid fa-truck-monster text-2xl text-slate-400 mb-1.5"></i>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Tidak ada data populasi unit yang sesuai dengan filter.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECTION 2B: STATUS MAINTENANCE UNIT ==================== -->
+        <section id="view-units" class="hidden space-y-3.5">
+            <!-- Summary Strip Status Maintenance -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="bg-white dark:bg-mine-900 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Total Unit Terpantau</span>
+                        <h4 id="status-summary-total" class="text-xl font-bold font-mono mt-0.5">0</h4>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 text-sm">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-mine-900 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Sudah Maintenance (Close)</span>
+                        <h4 id="status-summary-done" class="text-xl font-bold font-mono text-teal-500 mt-0.5">0</h4>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center text-teal-500 text-sm">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-mine-900 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Belum Maintenance (Backlog)</span>
+                        <h4 id="status-summary-pending" class="text-xl font-bold font-mono text-amber-500 mt-0.5">0</h4>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 text-sm">
+                        <i class="fa-solid fa-hourglass-half"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header & Filter Controls Status Maintenance -->
+            <div class="bg-white dark:bg-mine-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+                    <div>
+                        <h2 class="text-sm font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-clipboard-check text-teal-500"></i>
+                            <span>Status Maintenance Unit</span>
+                        </h2>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">Monitoring status kesiapan maintenance terkini per unit (Close vs Belum Maintenance).</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <button onclick="switchTab('logs')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-amber-500/15 text-slate-600 dark:text-slate-300 hover:text-amber-500 border border-slate-200 dark:border-slate-700 font-medium text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-clock-rotate-left"></i> Lihat Riwayat Log &rarr;
+                        </button>
+                        <button id="btn-bulk-delete-unit" onclick="confirmBulkDelete('unit')" class="hidden px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/30 font-semibold text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-trash-can"></i> Hapus Terpilih (<span id="count-selected-unit">0</span>)
+                        </button>
+                        <button onclick="openModal('unitModal')" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold text-xs transition flex items-center gap-1.5 shadow-sm shadow-amber-500/10">
+                            <i class="fa-solid fa-plus"></i> Update Status
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter Bar Status Maintenance -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div class="relative sm:col-span-2">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]"></i>
+                        <input type="text" id="search-unit" oninput="renderUnitsTable()" placeholder="Cari CN Unit, Tipe Unit, Type CPE, Serial Number, IP Address..." class="w-full pl-8 pr-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                    </div>
+
+                    <select id="filter-maint-progress" onchange="renderUnitsTable()" class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                        <option value="all">Semua Status Pengerjaan</option>
+                        <option value="Sudah">Close (Sudah Maintenance)</option>
+                        <option value="Belum">Belum Maintenance</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Responsive Table Container Status Maintenance -->
+            <div class="bg-white dark:bg-mine-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 dark:bg-mine-800/80 border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                <th class="py-2.5 px-3 w-8">
+                                    <input type="checkbox" id="select-all-units" onchange="toggleSelectAll('unit', this.checked)" class="rounded border-slate-300 dark:border-slate-600 text-amber-500 focus:ring-amber-500 cursor-pointer">
+                                </th>
+                                <th class="py-2.5 px-3">CN Unit & Tipe Unit</th>
+                                <th class="py-2.5 px-3">Perangkat CPE (SN / IP)</th>
+                                <th class="py-2.5 px-3">Status Pekerjaan</th>
+                                <th class="py-2.5 px-3">Update Terakhir</th>
+                                <th class="py-2.5 px-3 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="units-table-body" class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                            <!-- Diisi via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="empty-units-state" class="hidden py-8 text-center">
+                    <i class="fa-solid fa-folder-open text-2xl text-slate-400 mb-1.5"></i>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Tidak ada data status maintenance yang sesuai dengan filter.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECTION 2C: LOG AKTIVITAS MAINTENANCE ==================== -->
+        <section id="view-logs" class="hidden space-y-3.5">
+            <div class="bg-white dark:bg-mine-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+                    <div>
+                        <h2 class="text-sm font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-amber-500"></i>
+                            <span>Log Riwayat Aktivitas Maintenance</span>
+                        </h2>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">Catatan kronologis pekerjaan Preventive, Installasi, Dismantle, Troubleshoot, Replace CPE, Reason & Action, serta Teknisi PIC.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <button onclick="confirmClearAll('unit')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-rose-500/15 text-slate-600 dark:text-slate-300 hover:text-rose-500 border border-slate-200 dark:border-slate-700 font-medium text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-broom"></i> Bersihkan Log
+                        </button>
+                        <button onclick="openModal('unitModal')" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold text-xs transition flex items-center gap-1.5 shadow-sm shadow-amber-500/10">
+                            <i class="fa-solid fa-plus"></i> Catat Log Baru
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter Bar Log Maintenance -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div class="relative sm:col-span-2">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]"></i>
+                        <input type="text" id="search-logs" oninput="renderLogsTable()" placeholder="Cari CN Unit, SN, Reason, Action, atau Nama Teknisi..." class="w-full pl-8 pr-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                    </div>
+
+                    <select id="filter-log-type" onchange="renderLogsTable()" class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                        <option value="all">Semua Kategori Pekerjaan</option>
+                        <option value="Maintenance">Maintenance (Preventive)</option>
+                        <option value="Installasi">Installasi</option>
+                        <option value="Dismantle">Dismantle</option>
+                        <option value="Troubleshoot">Troubleshoot</option>
+                        <option value="Replace CPE">Replace CPE</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabel Log Maintenance -->
+            <div class="bg-white dark:bg-mine-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 dark:bg-mine-800/80 border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                <th class="py-2.5 px-3">Tanggal</th>
+                                <th class="py-2.5 px-3">CN Unit & Tipe</th>
+                                <th class="py-2.5 px-3">Kategori Pekerjaan</th>
+                                <th class="py-2.5 px-3">Perangkat CPE (SN / IP)</th>
+                                <th class="py-2.5 px-3">Reason & Action</th>
+                                <th class="py-2.5 px-3">Teknisi PIC</th>
+                                <th class="py-2.5 px-3 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-table-body" class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                            <!-- Diisi via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="empty-logs-state" class="hidden py-8 text-center">
+                    <i class="fa-solid fa-clock-rotate-left text-2xl text-slate-400 mb-1.5"></i>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Belum ada riwayat log maintenance yang sesuai dengan filter.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECTION 3: INVENTARIS STOK CPE ==================== -->
+        <section id="view-cpe" class="hidden space-y-3.5">
+            <!-- Summary Strip CPE -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="bg-white dark:bg-mine-900 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Total Aset CPE Gudang</span>
+                        <h4 id="cpe-summary-total" class="text-xl font-bold font-mono mt-0.5">0</h4>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-mine-800 flex items-center justify-center text-slate-500 text-sm">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-mine-900 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Stok CPE Ready (Siap Pakai)</span>
+                        <h4 id="cpe-summary-ready" class="text-xl font-bold font-mono text-cyan-500 mt-0.5">0</h4>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-500 text-sm">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-mine-900 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">CPE Rusak / Perlu Servis</span>
+                        <h4 id="cpe-summary-broken" class="text-xl font-bold font-mono text-rose-500 mt-0.5">0</h4>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 text-sm">
+                        <i class="fa-solid fa-screwdriver-wrench"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CPE Table & Actions -->
+            <div class="bg-white dark:bg-mine-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div>
+                        <h2 class="text-sm font-bold">Manajemen Stok Perangkat CPE (Radio / Modem Telemetry)</h2>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">Monitoring Serial Number, IP Address, MSISDN, kondisi perangkat siap pasang, dan unit rusak.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <button id="btn-bulk-delete-cpe" onclick="confirmBulkDelete('cpe')" class="hidden px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/30 font-semibold text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-trash-can"></i> Hapus Terpilih (<span id="count-selected-cpe">0</span>)
+                        </button>
+                        <button onclick="confirmClearAll('cpe')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-rose-500/15 text-slate-600 dark:text-slate-300 hover:text-rose-500 border border-slate-200 dark:border-slate-700 font-medium text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-broom"></i> Hapus Semua
+                        </button>
+                        <select id="filter-cpe-status" onchange="renderCpeTable()" class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                            <option value="all">Semua Kondisi CPE</option>
+                            <option value="Ready">Stok CPE Ready</option>
+                            <option value="Rusak">CPE Rusak</option>
+                        </select>
+                        <button onclick="openModal('cpeModal')" class="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-semibold text-xs transition flex items-center gap-1 shadow-sm shadow-cyan-500/10">
+                            <i class="fa-solid fa-plus"></i> Tambah Stok CPE
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 dark:bg-mine-800/80 border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                <th class="py-2.5 px-3 w-8">
+                                    <input type="checkbox" id="select-all-cpe" onchange="toggleSelectAll('cpe', this.checked)" class="rounded border-slate-300 dark:border-slate-600 text-cyan-500 focus:ring-cyan-500 cursor-pointer">
+                                </th>
+                                <th class="py-2.5 px-3">Serial Number</th>
+                                <th class="py-2.5 px-3">Model Perangkat</th>
+                                <th class="py-2.5 px-3">IP Address</th>
+                                <th class="py-2.5 px-3">MSISDN</th>
+                                <th class="py-2.5 px-3">Kondisi</th>
+                                <th class="py-2.5 px-3">Keterangan</th>
+                                <th class="py-2.5 px-3 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cpe-table-body" class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                            <!-- Diisi via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== MODAL 1: TAMBAH / EDIT UNIT & MAINTENANCE ==================== -->
+    <div id="unitModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 backdrop-blur-sm p-3">
+        <div class="bg-white dark:bg-mine-900 border border-slate-200 dark:border-slate-700 rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-fadeIn">
+            <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-mine-800/50">
+                <h3 id="unitModalTitle" class="font-bold text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-truck-monster text-amber-500"></i>
+                    <span>Input Data Unit & Maintenance</span>
+                </h3>
+                <button onclick="closeModal('unitModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+            <form id="unitForm" onsubmit="saveUnit(event)" class="p-4 space-y-2.5 max-h-[82vh] overflow-y-auto">
+                <input type="hidden" id="edit-unit-id">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">CN Unit *</label>
+                        <input type="text" id="unit-code" list="cn-unit-suggestions" oninput="autoFillByCnUnit(this.value)" onchange="autoFillByCnUnit(this.value)" required placeholder="Contoh: HD-78501" class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500 font-mono uppercase">
+                        <datalist id="cn-unit-suggestions"></datalist>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Tipe Unit *</label>
+                        <select id="unit-type" required class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                            <option value="Dump Truck (HD)">Dump Truck (HD)</option>
+                            <option value="Excavator (EX)">Excavator (EX)</option>
+                            <option value="Bulldozer (DZ)">Bulldozer (DZ)</option>
+                            <option value="Motor Grader (GR)">Motor Grader (GR)</option>
+                            <option value="CCTV">CCTV</option>
+                            <option value="Drill Rig (DR)">Drill Rig (DR)</option>
+                            <option value="Rover">Rover</option>
+                            <option value="IOT">IOT</option>
+                            <option value="Mesin absen">Mesin absen</option>
+                            <option value="Water pump">Water pump</option>
+                            <option value="Radar">Radar</option>
+                            <option value="Smart fuel">Smart fuel</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Type CPE *</label>
+                        <select id="unit-cpe-type" required class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                            <option value="R5020-5G">R5020-5G</option>
+                            <option value="R2110-4L">R2110-4L</option>
+                            <option value="-">- (Tanpa CPE)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Serial Number</label>
+                        <input type="text" id="unit-cpe-sn" placeholder="Misal: SN-CPE-99210" class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500 font-mono uppercase">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">IP Address</label>
+                        <input type="text" id="unit-ip-address" oninput="this.value = this.value.replace(/,/g, '.')" placeholder="Misal: 10.24.10.101" class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">MSISDN</label>
+                        <input type="text" id="unit-msisdn" placeholder="Misal: 628115400101" class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500 font-mono">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Kategori Pekerjaan *</label>
+                        <select id="maint-type" onchange="handleMaintTypeChange(this.value)" required class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                            <option value="Maintenance">Maintenance (Preventive)</option>
+                            <option value="Installasi">Installasi</option>
+                            <option value="Dismantle">Dismantle</option>
+                            <option value="Troubleshoot">Troubleshoot</option>
+                            <option value="Replace CPE">Replace CPE</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Status Pekerjaan *</label>
+                        <select id="maint-status" required class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                            <option value="Sudah">Close</option>
+                            <option value="Belum">Belum Maintenance</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Panel Otomatis Ambil dari Stok CPE Ready (Muncul saat Installasi / Replace CPE) -->
+                <div id="ready-cpe-picker-box" class="hidden p-2.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-warehouse"></i>
+                            <span>Ambil Otomatis dari Stok CPE Ready</span>
+                        </label>
+                        <span id="ready-cpe-count-badge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-300">0 Ready</span>
+                    </div>
+                    <select id="ready-cpe-select" onchange="applySelectedReadyCpe(this.value)" class="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-mine-900 border border-cyan-500/40 focus:outline-none focus:border-cyan-500 font-mono">
+                        <option value="">-- Pilih Perangkat dari Stok CPE Ready --</option>
+                    </select>
+                    <p id="ready-cpe-helper-text" class="text-[10px] text-slate-500 dark:text-slate-400">Perangkat dari Stok CPE Ready otomatis terisi ke Type CPE, SN, IP, MSISDN & akan dikurangi dari stok saat disimpan.</p>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Reason</label>
+                    <input type="text" id="maint-reason" placeholder="Contoh: Jadwal PM rutin / Packet loss tinggi" class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Action</label>
+                    <textarea id="maint-action" rows="2" placeholder="Tindakan perbaikan, pengecekan RSSI, ganti antena..." class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Teknisi PIC</label>
+                        <input type="text" id="maint-tech" placeholder="Nama Teknisi PIC" class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Tanggal *</label>
+                        <input type="date" id="maint-date" required class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500 font-mono">
+                    </div>
+                </div>
+
+                <div class="pt-2.5 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('unitModal')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-mine-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition">Batal</button>
+                    <button type="submit" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20 transition">Simpan Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 2: TAMBAH / EDIT STOK CPE ==================== -->
+    <div id="cpeModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 backdrop-blur-sm p-3">
+        <div class="bg-white dark:bg-mine-900 border border-slate-200 dark:border-slate-700 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-mine-800/50">
+                <h3 id="cpeModalTitle" class="font-bold text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-satellite-dish text-cyan-500"></i>
+                    <span>Input Stok Perangkat CPE</span>
+                </h3>
+                <button onclick="closeModal('cpeModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+            <form id="cpeForm" onsubmit="saveCpe(event)" class="p-4 space-y-3">
+                <input type="hidden" id="edit-cpe-id">
+
+                <div>
+                    <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Serial Number (SN) *</label>
+                    <input type="text" id="cpe-sn" required placeholder="Contoh: CPE-LT420-881" class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-cyan-500 font-mono uppercase">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Model / Merk Perangkat *</label>
+                    <select id="cpe-model" required class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-cyan-500">
+                        <option value="Rajant BreadCrumb ES1">Rajant BreadCrumb ES1</option>
+                        <option value="Cambium PMP 450b">Cambium PMP 450b</option>
+                        <option value="MikroTik LtAP LTE6">MikroTik LtAP LTE6</option>
+                        <option value="Cisco IW3702 Mesh">Cisco IW3702 Mesh</option>
+                        <option value="Teltonika RUT955">Teltonika RUT955</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">IP Address</label>
+                        <input type="text" id="cpe-ip" oninput="this.value = this.value.replace(/,/g, '.')" placeholder="10.24.10.105" class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-cyan-500 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">MSISDN (No. Kartu SIM)</label>
+                        <input type="text" id="cpe-msisdn" placeholder="628115409988" class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-cyan-500 font-mono">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Status Kondisi *</label>
+                    <select id="cpe-status" required class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-cyan-500">
+                        <option value="Ready">Stok CPE Ready</option>
+                        <option value="Rusak">CPE Rusak</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Keterangan / Diagnosa</label>
+                    <textarea id="cpe-note" rows="2" placeholder="Siap instalasi atau detail kerusakan (misal: Port LAN mati)..." class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-cyan-500"></textarea>
+                </div>
+
+                <div class="pt-2.5 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('cpeModal')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-mine-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition">Batal</button>
+                    <button type="submit" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 hover:bg-cyan-600 text-slate-950 shadow-md shadow-cyan-500/20 transition">Simpan CPE</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 3: KONFIRMASI HAPUS (CUSTOM NON-ALERT) ==================== -->
+    <div id="deleteModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 backdrop-blur-sm p-3">
+        <div class="bg-white dark:bg-mine-900 border border-slate-200 dark:border-slate-700 rounded-xl w-full max-w-xs p-5 shadow-2xl text-center space-y-3">
+            <div class="w-10 h-10 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto text-base">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
+            <div>
+                <h4 class="font-bold text-sm">Hapus Data Terpilih?</h4>
+                <p id="deleteModalMsg" class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Tindakan ini akan memperbarui kalkulasi inventaris secara permanen.</p>
+            </div>
+            <div class="flex gap-2 pt-1">
+                <button onclick="closeModal('deleteModal')" class="flex-1 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-mine-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition">Batal</button>
+                <button id="confirmDeleteBtn" class="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-rose-500 hover:bg-rose-600 text-white transition">Ya, Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 4: IMPORT EXCEL / CSV ==================== -->
+    <div id="importModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 backdrop-blur-sm p-3">
+        <div class="bg-white dark:bg-mine-900 border border-slate-200 dark:border-slate-700 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-mine-800/50">
+                <h3 class="font-bold text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel text-emerald-500"></i>
+                    <span>Import Data Excel (.xlsx / .xls / .csv)</span>
+                </h3>
+                <button onclick="closeModal('importModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+            <form onsubmit="processExcelImport(event)" class="p-4 space-y-3">
+                <div>
+                    <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Target Tabel Inventaris *</label>
+                    <select id="import-target" class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-emerald-500">
+                        <option value="units">Populasi Unit</option>
+                        <option value="cpe">Stok Perangkat CPE (Gudang)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Mode Penggabungan Data *</label>
+                    <select id="import-mode" class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-emerald-500">
+                        <option value="append">Tambahkan ke Data yang Ada (Append)</option>
+                        <option value="replace">Ganti Seluruh Data Lama (Replace)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">Pilih File Excel / CSV *</label>
+                    <input type="file" id="import-file" accept=".xlsx,.xls,.csv" required class="w-full text-[11px] text-slate-500 file:mr-2.5 file:py-1.5 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-emerald-500/15 file:text-emerald-600 dark:file:text-emerald-400 hover:file:bg-emerald-500/25 cursor-pointer bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 rounded-lg p-1">
+                </div>
+
+                <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-mine-800/70 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Belum punya format kolom?</span>
+                    <button type="button" onclick="downloadExcelTemplate()" class="text-[11px] font-semibold text-emerald-500 hover:underline flex items-center gap-1">
+                        <i class="fa-solid fa-download"></i> Download Template .xlsx
+                    </button>
+                </div>
+
+                <div class="pt-2.5 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('importModal')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-mine-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition">Batal</button>
+                    <button type="submit" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-md shadow-emerald-500/20 transition">Proses Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 5: KONFIGURASI GOOGLE SPREADSHEET AUTO-SYNC ==================== -->
+    <div id="gsheetModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 backdrop-blur-sm p-3">
+        <div class="bg-white dark:bg-mine-900 border border-slate-200 dark:border-slate-700 rounded-xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-mine-800/50">
+                <h3 class="font-bold text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-table text-emerald-500"></i>
+                    <span>Auto-Sync Google Spreadsheet</span>
+                </h3>
+                <button onclick="closeModal('gsheetModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+            <div class="p-4 space-y-3 max-h-[84vh] overflow-y-auto text-xs">
+                <div class="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2">
+                    <div>
+                        <p class="font-bold text-emerald-600 dark:text-emerald-400">Status Sinkronisasi Otomatis</p>
+                        <p id="gsheet-last-sync-text" class="text-[11px] text-slate-500 dark:text-slate-400">Belum terhubung ke Google Spreadsheet</p>
+                    </div>
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                        <input type="checkbox" id="gsheet-auto-toggle" onchange="saveGsheetSettings()" class="rounded border-slate-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500">
+                        <span class="font-semibold text-[11px]">Auto-Save</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">URL Web App Google Apps Script *</label>
+                    <input type="url" id="gsheet-webapp-url" placeholder="https://script.google.com/macros/s/AKfycb.../exec" class="w-full px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-mine-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-emerald-500 font-mono">
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="saveGsheetSettings(true)" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i> Simpan & Sync Sekarang
+                    </button>
+                    <button type="button" onclick="pullFromGoogleSheets()" class="px-3 py-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 font-semibold text-xs transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-cloud-arrow-down"></i> Tarik Data dari Sheet
+                    </button>
+                    <button type="button" onclick="copyShareableLink()" class="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-semibold text-xs transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-share-nodes"></i> Salin Link Perangkat Lain
+                    </button>
+                </div>
+
+                <div class="border-t border-slate-200 dark:border-slate-800 pt-2.5 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-[11px] text-slate-700 dark:text-slate-200">Cara Pasang di Google Spreadsheet (1 Menit):</span>
+                        <button type="button" onclick="copyAppsScriptCode()" class="px-2.5 py-1 rounded bg-slate-100 dark:bg-mine-800 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-slate-200 dark:border-slate-700 font-semibold text-[11px] transition flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> Copy Kode Script
+                        </button>
+                    </div>
+                    <ol class="list-decimal list-inside space-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        <li>Buka <strong>Google Spreadsheet</strong> baru &rarr; klik menu <strong>Ekstensi (Extensions) &rarr; Apps Script</strong>.</li>
+                        <li>Hapus kode bawaan, tempel (paste) kode di bawah ini, lalu klik ikon <strong>Simpan</strong>.</li>
+                        <li>Klik <strong>Terapkan (Deploy) &rarr; Kelola deployment &rarr; Edit &rarr; Versi baru</strong> (atau Deployment baru jenis <strong>Aplikasi Web</strong>).</li>
+                        <li>Setel <em>Yang memiliki akses</em> ke <strong>Siapa saja (Anyone)</strong> &rarr; klik <strong>Terapkan</strong> &rarr; salin URL Web App ke kolom di atas.</li>
+                    </ol>
+                    <textarea id="apps-script-template" readonly rows="8" class="w-full p-2.5 text-[10px] font-mono rounded-lg bg-slate-950 text-emerald-400 border border-slate-800 focus:outline-none">function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.tryLock(15000);
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var raw = '{}';
+    if (e && e.postData && e.postData.contents) {
+      raw = e.postData.contents;
+    } else if (e && e.parameter && e.parameter.payload) {
+      raw = e.parameter.payload;
+    }
+    var payload = JSON.parse(raw);
+
+    // 1. Sheet Populasi_Unit (Daftar Armada Unik & Perangkat CPE Terpasang)
+    var uniquePop = deduplicateUnits(payload.population || [], false);
+    writeSheet(ss, 'Populasi_Unit', ['CN Unit','Tipe Unit','Status Unit','Type CPE','Serial Number','IP Address','MSISDN','Update Terakhir'], uniquePop, function(p) {
+      return [
+        p.code || p['CN Unit'] || '',
+        p.type || p['Tipe Unit'] || '',
+        p.status || p['Status Unit'] || 'Active',
+        p.cpeType || p['Type CPE'] || '-',
+        p.cpeSn || p['Serial Number'] || '-',
+        p.ipAddress || p['IP Address'] || '-',
+        p.msisdn || p['MSISDN'] || '-',
+        p.date || p['Update Terakhir'] || ''
+      ];
+    });
+
+    // 2. Sheet Status_Maintenance (Unik per CN Unit & Otomatis Hapus Duplikat Belum Maintenance)
+    var uniqueStatus = deduplicateUnits(payload.statusMaintenance || [], true);
+    writeSheet(ss, 'Status_Maintenance', ['CN Unit','Tipe Unit','Type CPE','Serial Number','IP Address','Status Pekerjaan','Kategori Terakhir','Teknisi PIC','Update Terakhir'], uniqueStatus, function(s) {
+      var isDone = s.maintStatus === 'Sudah' || /close|sudah/i.test(String(s['Status Pekerjaan'] || ''));
+      return [
+        s.code || s['CN Unit'] || '',
+        s.type || s['Tipe Unit'] || '',
+        s.cpeType || s['Type CPE'] || '-',
+        s.cpeSn || s['Serial Number'] || '-',
+        s.ipAddress || s['IP Address'] || '-',
+        isDone ? 'Close' : 'Belum Maintenance',
+        s.maintType || s['Kategori Terakhir'] || 'Maintenance',
+        s.tech || s['Teknisi PIC'] || '-',
+        s.date || s['Update Terakhir'] || ''
+      ];
+    });
+
+    // 3. Sheet Log_Maintenance (Riwayat Kronologis Seluruh Pekerjaan & Hapus Duplikat Tanpa Keterangan)
+    var cleanedLogs = deduplicateEmptyLogs(payload.logs || payload.units || []);
+    writeSheet(ss, 'Log_Maintenance', ['Tanggal','CN Unit','Tipe Unit','Status Unit','Kategori Pekerjaan','Status Pekerjaan','Type CPE','Serial Number','IP Address','MSISDN','Reason','Action','Teknisi PIC'], cleanedLogs, function(u) {
+      var isDone = u.maintStatus === 'Sudah' || /close|sudah/i.test(String(u['Status Pekerjaan'] || ''));
+      return [
+        u.date || u['Tanggal'] || '',
+        u.code || u['CN Unit'] || '',
+        u.type || u['Tipe Unit'] || '',
+        u.status || u['Status Unit'] || 'Active',
+        u.maintType || u['Kategori Pekerjaan'] || 'Maintenance',
+        isDone ? 'Close' : 'Belum',
+        u.cpeType || u['Type CPE'] || '-',
+        u.cpeSn || u['Serial Number'] || '-',
+        u.ipAddress || u['IP Address'] || '-',
+        u.msisdn || u['MSISDN'] || '-',
+        u.reason || u['Reason'] || '-',
+        u.action || u['Action'] || '-',
+        u.tech || u['Teknisi PIC'] || '-'
+      ];
+    });
+
+    // 4. Sheet Stok_CPE (Inventaris Gudang Ready / Rusak)
+    writeSheet(ss, 'Stok_CPE', ['Serial Number','Model CPE','IP Address','MSISDN','Kondisi Stok','Keterangan'], payload.cpe || [], function(c) {
+      return [
+        c.sn || c['Serial Number'] || '',
+        c.model || c['Model CPE'] || '',
+        c.ip || c['IP Address'] || '-',
+        c.msisdn || c['MSISDN'] || '-',
+        c.status || c['Kondisi Stok'] || 'Ready',
+        c.note || c['Keterangan'] || '-'
+      ];
+    });
+
+    SpreadsheetApp.flush();
+    return jsonResponse({ status: 'ok', message: 'Synced successfully' });
+  } catch (err) {
+    return jsonResponse({ status: 'error', message: err.toString() });
+  } finally {
+    if (lock.hasLock()) lock.releaseLock();
+  }
+}
+
+function deduplicateEmptyLogs(rows) {
+  var hasCompleteByUnit = {};
+  (rows || []).forEach(function(item) {
+    var key = String(item.code || item['CN Unit'] || '').trim().toUpperCase();
+    var r = String(item.reason || item['Reason'] || '').trim();
+    var a = String(item.action || item['Action'] || '').trim();
+    var hasDesc = (r && r !== '-') || (a && a !== '-');
+    if (key && hasDesc) {
+      hasCompleteByUnit[key] = true;
+    }
+  });
+  var seenEmptyByUnit = {};
+  return (rows || []).filter(function(item) {
+    var key = String(item.code || item['CN Unit'] || '').trim().toUpperCase();
+    if (!key) return false;
+    var r = String(item.reason || item['Reason'] || '').trim();
+    var a = String(item.action || item['Action'] || '').trim();
+    var isEmpty = (!r || r === '-') && (!a || a === '-');
+    if (!isEmpty) return true;
+    if (hasCompleteByUnit[key]) return false;
+    if (seenEmptyByUnit[key]) return false;
+    seenEmptyByUnit[key] = true;
+    return true;
+  });
+}
+
+function deduplicateUnits(rows, preferClose) {
+  var map = {};
+  (rows || []).forEach(function(item) {
+    var key = String(item.code || item['CN Unit'] || '').trim().toUpperCase();
+    if (!key) return;
+    var isClose = item.maintStatus === 'Sudah' || /close|sudah/i.test(String(item['Status Pekerjaan'] || ''));
+    if (!map[key]) {
+      map[key] = item;
+    } else if (preferClose && isClose) {
+      map[key] = item;
+    } else if (!preferClose || !(map[key].maintStatus === 'Sudah' || /close|sudah/i.test(String(map[key]['Status Pekerjaan'] || '')))) {
+      map[key] = item;
+    }
+  });
+  return Object.keys(map).map(function(k) { return map[k]; });
+}
+
+function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var payload = {
+      status: 'ok',
+      population: readSheet(ss, 'Populasi_Unit'),
+      statusMaintenance: readSheet(ss, 'Status_Maintenance'),
+      logs: readSheet(ss, 'Log_Maintenance'),
+      units: readSheet(ss, 'Populasi_Unit'),
+      cpe: readSheet(ss, 'Stok_CPE')
+    };
+    var cb = e && e.parameter && e.parameter.callback;
+    if (cb) {
+      return ContentService.createTextOutput(cb + '(' + JSON.stringify(payload) + ');')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+    return jsonResponse(payload);
+  } catch (err) {
+    var errPayload = { status: 'error', message: err.toString() };
+    var errCb = e && e.parameter && e.parameter.callback;
+    if (errCb) {
+      return ContentService.createTextOutput(errCb + '(' + JSON.stringify(errPayload) + ');')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+    return jsonResponse(errPayload);
+  }
+}
+
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function writeSheet(ss, name, headers, rows, mapper) {
+  var sheet = ss.getSheetByName(name) || ss.insertSheet(name);
+  sheet.clearContents();
+  var data = [headers].concat(rows.map(mapper));
+  var range = sheet.getRange(1, 1, data.length, headers.length);
+  range.setNumberFormat('@');
+  range.setValues(data);
+}
+
+function readSheet(ss, name) {
+  var sheet = ss.getSheetByName(name);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  var vals = sheet.getDataRange().getDisplayValues();
+  var headers = vals[0];
+  return vals.slice(1).map(function(r) {
+    var obj = {};
+    headers.forEach(function(h, i) { obj[h] = r[i]; });
+    return obj;
+  });
+}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        // --- 1. DATA INITIALIZATION & STORAGE ---
+        const DEFAULT_PUBLIC_GSHEET_URL = ''; // Opsional: tempel URL Web App (/exec) di sini jika file di-host agar otomatis terhubung tanpa parameter URL
+        const STORAGE_KEY_UNITS = 'minetech_units_v2';
+        const STORAGE_KEY_CPE = 'minetech_cpe_v2';
+        const STORAGE_KEY_GSHEET_URL = 'minetech_gsheet_url_v1';
+        const STORAGE_KEY_GSHEET_AUTO = 'minetech_gsheet_auto_v1';
+        let gsheetSyncTimer = null;
+        let gsheetPollInterval = null;
+        let isPullingFromSheet = false;
+        let isPushingToSheet = false;
+        let hasUnsavedLocalChanges = false;
+        let lastLocalWriteAt = 0;
+        let hasLocalStoredData = false;
+
+        const defaultUnits = [
+            {
+                id: 'u_1001',
+                code: 'HD-78501',
+                type: 'Dump Truck (HD)',
+                status: 'Active',
+                cpeType: 'R5020-5G',
+                cpeSn: 'SN-5G-88401',
+                ipAddress: '10.24.10.101',
+                msisdn: '628115400101',
+                maintType: 'Maintenance',
+                maintStatus: 'Sudah',
+                reason: 'Jadwal PM rutin bulanan',
+                action: 'Pembersihan antena & pengecekan RSSI/SNR',
+                tech: 'Budi Santoso',
+                date: '2026-11-10'
+            },
+            {
+                id: 'u_1002',
+                code: 'EX-26004',
+                type: 'Excavator (EX)',
+                status: 'Active',
+                cpeType: 'R2110-4L',
+                cpeSn: 'SN-4L-77210',
+                ipAddress: '10.24.10.102',
+                msisdn: '628115400102',
+                maintType: 'Maintenance',
+                maintStatus: 'Belum',
+                reason: 'Antrian Preventive Maintenance Pit Utara',
+                action: '-',
+                tech: 'Andi Saputra',
+                date: '2026-11-14'
+            }
+        ];
+
+        const defaultCpe = [
+            {
+                id: 'c_2001',
+                sn: 'SN-5G-99011',
+                model: 'R5020-5G',
+                ip: '10.24.10.211',
+                msisdn: '628115409211',
+                status: 'Ready',
+                note: 'Siap pasang di gudang IT/Radio'
+            },
+            {
+                id: 'c_2002',
+                sn: 'SN-4L-66109',
+                model: 'R2110-4L',
+                ip: '10.24.10.212',
+                msisdn: '628115409212',
+                status: 'Rusak',
+                note: 'Modul LTE no service - proses RMA'
+            }
+        ];
+
+        let unitsData = [];
+        let cpeData = [];
+        let selectedPopCodes = new Set();
+        let selectedUnitIds = new Set();
+        let selectedCpeIds = new Set();
+        let maintenanceChartInstance = null;
+        let cpeChartInstance = null;
+
+        function loadDataFromStorage() {
+            try {
+                const rawUnits = localStorage.getItem(STORAGE_KEY_UNITS);
+                const rawCpe = localStorage.getItem(STORAGE_KEY_CPE);
+                hasLocalStoredData = rawUnits !== null || rawCpe !== null;
+                unitsData = rawUnits ? JSON.parse(rawUnits) : [...defaultUnits];
+                cpeData = rawCpe ? JSON.parse(rawCpe) : [...defaultCpe];
+            } catch (e) {
+                console.error('Gagal memuat localStorage:', e);
+                hasLocalStoredData = false;
+                unitsData = [...defaultUnits];
+                cpeData = [...defaultCpe];
+            }
+        }
+
+        function isLogWithoutDescription(item) {
+            const r = String(item?.reason || '').trim();
+            const a = String(item?.action || '').trim();
+            return (!r || r === '-') && (!a || a === '-');
+        }
+
+        function cleanDuplicateEmptyMaintenanceLogs() {
+            const unitsWithDescription = new Set();
+            unitsData.forEach(item => {
+                const key = (item.code || '').trim().toUpperCase();
+                if (key && !isLogWithoutDescription(item)) {
+                    unitsWithDescription.add(key);
+                }
+            });
+
+            const seenEmptyUnits = new Set();
+            unitsData = unitsData.filter(item => {
+                const key = (item.code || '').trim().toUpperCase();
+                if (!key) return false;
+                if (!isLogWithoutDescription(item)) return true;
+
+                // Jika CN Unit ini sudah punya log dengan keterangan, atau sudah ada 1 entri kosong sebelumnya, hapus duplikat kosong ini
+                if (unitsWithDescription.has(key) || seenEmptyUnits.has(key)) {
+                    return false;
+                }
+                seenEmptyUnits.add(key);
+                return true;
+            });
+        }
+
+        function renderRecentLogs() {
+            const listEl = document.getElementById('recent-logs-list');
+            if (!listEl) return;
+
+            if (unitsData.length === 0) {
+                listEl.innerHTML = `<p class="text-[11px] text-slate-400 text-center py-6">Belum ada aktivitas tercatat.</p>`;
+                return;
+            }
+
+            const recent = [...unitsData].slice(-6).reverse();
+            listEl.innerHTML = recent.map(u => {
+                const isDone = u.maintStatus === 'Sudah';
+                const badgeClass = isDone
+                    ? 'bg-teal-500/15 text-teal-500 border-teal-500/30'
+                    : 'bg-amber-500/15 text-amber-500 border-amber-500/30';
+                return `
+                    <div class="p-2 rounded-lg bg-slate-50 dark:bg-mine-800/70 border border-slate-200/70 dark:border-slate-700/70 flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-mono font-bold text-xs text-slate-800 dark:text-white">${u.code}</span>
+                                <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">${u.maintType}</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">${u.reason || '-'} &bull; ${u.date || '-'}</p>
+                        </div>
+                        <span class="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badgeClass}">
+                            ${isDone ? 'Close' : 'Belum'}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderCharts(stats) {
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#94a3b8' : '#475569';
+
+            const maintCtx = document.getElementById('maintenanceChart');
+            if (maintCtx) {
+                if (maintenanceChartInstance) maintenanceChartInstance.destroy();
+                maintenanceChartInstance = new Chart(maintCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Preventive', 'Installasi', 'Dismantle', 'Troubleshoot', 'Replace CPE'],
+                        datasets: [{
+                            data: [stats.preventive, stats.installasi, stats.dismantle, stats.troubleshoot, stats.replace],
+                            backgroundColor: ['#3b82f6', '#10b981', '#a855f7', '#f43f5e', '#f59e0b'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '64%',
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { color: textColor, boxWidth: 10, font: { size: 10 } }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const cpeCtx = document.getElementById('cpeChart');
+            if (cpeCtx) {
+                if (cpeChartInstance) cpeChartInstance.destroy();
+                cpeChartInstance = new Chart(cpeCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Populasi Active', 'CPE Ready', 'CPE Rusak'],
+                        datasets: [{
+                            label: 'Jumlah Unit',
+                            data: [stats.activePop, stats.cpeReady, stats.cpeBroken],
+                            backgroundColor: ['#10b981', '#06b6d4', '#f43f5e'],
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+                            y: { beginAtZero: true, ticks: { color: textColor, stepSize: 1, font: { size: 10 } } }
+                        }
+                    }
+                });
+            }
+        }
+
+        // --- 2. NAVIGATION & DASHBOARD RENDERING ---
+        function switchTab(tabName) {
+            const views = ['dashboard', 'population', 'units', 'logs', 'cpe'];
+            views.forEach(v => {
+                const sec = document.getElementById(`view-${v}`);
+                if (sec) sec.classList.toggle('hidden', v !== tabName);
+
+                const deskBtn = document.getElementById(`tab-${v}`);
+                if (deskBtn) {
+                    deskBtn.className = v === tabName
+                        ? 'nav-btn px-3 py-1 rounded-md text-xs font-medium transition-all bg-white dark:bg-mine-900 text-amber-600 dark:text-amber-400 shadow-sm'
+                        : 'nav-btn px-3 py-1 rounded-md text-xs font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white';
+                }
+
+                const mobBtn = document.getElementById(`mob-tab-${v}`);
+                if (mobBtn) {
+                    mobBtn.className = v === tabName
+                        ? 'mob-nav-btn flex-1 py-1 rounded-md text-[11px] font-semibold bg-amber-500/10 text-amber-500'
+                        : 'mob-nav-btn flex-1 py-1 rounded-md text-[11px] font-medium text-slate-500 dark:text-slate-400';
+                }
+            });
+            refreshAllViews();
+        }
+
+        function filterPopulationAndJump(statusVal) {
+            switchTab('population');
+            const statusSelect = document.getElementById('filter-population-status');
+            if (statusSelect) statusSelect.value = statusVal;
+            renderPopulationTable();
+        }
+
+        function filterAndJump(filterVal) {
+            if (filterVal === 'sudah' || filterVal === 'belum') {
+                switchTab('units');
+                const progEl = document.getElementById('filter-maint-progress');
+                if (progEl) progEl.value = filterVal === 'sudah' ? 'Sudah' : 'Belum';
+                renderUnitsTable();
+            } else {
+                switchTab('logs');
+                const logTypeEl = document.getElementById('filter-log-type');
+                if (logTypeEl) logTypeEl.value = filterVal;
+                renderLogsTable();
+            }
+        }
+
+        function renderDashboard() {
+            const uniquePop = getUniquePopulationUnits();
+            const activePopUnits = uniquePop.filter(u => u.status === 'Active');
+            const activePop = activePopUnits.length;
+            const cpeReady = cpeData.filter(c => c.status === 'Ready').length;
+            const cpeBroken = cpeData.filter(c => c.status === 'Rusak').length;
+            // Total Populasi Unit otomatis menjumlahkan Populasi Active + Stok CPE Ready + CPE Rusak
+            const totalPop = activePop + cpeReady + cpeBroken;
+
+            const statusList = getMaintenanceStatusLogs();
+            const doneList = statusList.filter(u => u.maintStatus === 'Sudah');
+            const doneCodes = new Set(doneList.map(u => (u.code || '').trim().toUpperCase()));
+            const maintDone = doneList.length;
+            const maintPending = activePopUnits.filter(u => !doneCodes.has((u.code || '').trim().toUpperCase())).length;
+
+            const installasiCount = unitsData.filter(u => u.maintType === 'Installasi').length;
+            const dismantleCount = unitsData.filter(u => u.maintType === 'Dismantle').length;
+            const troubleshootCount = unitsData.filter(u => u.maintType === 'Troubleshoot').length;
+            const replaceCount = unitsData.filter(u => u.maintType === 'Replace CPE').length;
+
+            document.getElementById('kpi-total-pop').textContent = totalPop;
+            document.getElementById('kpi-active-pop').textContent = activePop;
+            const activePct = totalPop > 0 ? Math.round((activePop / totalPop) * 100) : 0;
+            document.getElementById('kpi-active-pct').textContent = `${activePct}% dari Total Aset`;
+
+            document.getElementById('kpi-cpe-ready').textContent = cpeReady;
+            document.getElementById('kpi-cpe-broken').textContent = cpeBroken;
+
+            document.getElementById('kpi-maint-done').textContent = maintDone;
+            const totalMaintTarget = maintDone + maintPending;
+            const donePct = totalMaintTarget > 0 ? Math.round((maintDone / totalMaintTarget) * 100) : 0;
+            document.getElementById('bar-maint-done').style.width = `${donePct}%`;
+
+            document.getElementById('kpi-maint-pending').textContent = maintPending;
+            const pendingPct = totalMaintTarget > 0 ? Math.round((maintPending / totalMaintTarget) * 100) : 0;
+            document.getElementById('kpi-maint-pending-pct').textContent = `${pendingPct}% Backlog / Antrian`;
+
+            // Preventive otomatis mengambil data dari Sudah Maintenance
+            document.getElementById('kpi-type-preventive').textContent = maintDone;
+            document.getElementById('kpi-type-installasi').textContent = installasiCount;
+            document.getElementById('kpi-type-dismantle').textContent = dismantleCount;
+            document.getElementById('kpi-type-troubleshoot').textContent = troubleshootCount;
+            document.getElementById('kpi-type-replace').textContent = replaceCount;
+
+            renderRecentLogs();
+            renderCharts({
+                preventive: maintDone,
+                installasi: installasiCount,
+                dismantle: dismantleCount,
+                troubleshoot: troubleshootCount,
+                replace: replaceCount,
+                activePop,
+                cpeReady,
+                cpeBroken
+            });
+        }
+
+        function refreshAllViews() {
+            renderDashboard();
+            renderPopulationTable();
+            renderUnitsTable();
+            renderLogsTable();
+            renderCpeTable();
+            updateCnUnitSuggestions();
+        }
+
+        // --- 3. DATA HELPERS & IP VALIDATION ---
+        function normalizeIpString(val) {
+            if (val === null || val === undefined) return '-';
+            let s = String(val).trim().replace(/,/g, '.');
+            if (!s || /^(null|undefined|nan|-)$/i.test(s)) return '-';
+            if (s.includes('/')) s = s.split('/')[0].trim();
+            return s || '-';
+        }
+
+        function isValidIpv4OrDash(ip) {
+            const clean = normalizeIpString(ip);
+            if (clean === '-') return true;
+            const parts = clean.split('.');
+            if (parts.length !== 4) return false;
+            return parts.every(p => /^\d{1,3}$/.test(p) && Number(p) >= 0 && Number(p) <= 255);
+        }
+
+        function getUnitFallbackInfoMap() {
+            const map = new Map();
+            unitsData.forEach(u => {
+                const key = (u.code || '').trim().toUpperCase();
+                if (!key) return;
+                const existing = map.get(key) || { type: u.type || 'Dump Truck (HD)', status: u.status || 'Active', cpeType: '-', cpeSn: '-', ipAddress: '-', msisdn: '-' };
+                if (u.type) existing.type = u.type;
+                if (u.status) existing.status = u.status;
+                if (u.cpeType && u.cpeType !== '-') existing.cpeType = u.cpeType;
+                if (u.cpeSn && u.cpeSn !== '-') existing.cpeSn = u.cpeSn;
+                const normIp = normalizeIpString(u.ipAddress);
+                if (normIp !== '-') existing.ipAddress = normIp;
+                if (u.msisdn && u.msisdn !== '-') existing.msisdn = u.msisdn;
+                map.set(key, existing);
+            });
+            return map;
+        }
+
+        function getUniquePopulationUnits() {
+            const fallbackMap = getUnitFallbackInfoMap();
+            const map = new Map();
+            unitsData.forEach(u => {
+                const key = (u.code || '').trim().toUpperCase();
+                if (!key) return;
+                const fb = fallbackMap.get(key) || {};
+                const normIp = normalizeIpString(u.ipAddress);
+                map.set(key, {
+                    ...u,
+                    code: key,
+                    type: u.type || fb.type || 'Dump Truck (HD)',
+                    status: u.status || fb.status || 'Active',
+                    cpeType: (u.cpeType && u.cpeType !== '-') ? u.cpeType : (fb.cpeType || '-'),
+                    cpeSn: (u.cpeSn && u.cpeSn !== '-') ? u.cpeSn : (fb.cpeSn || '-'),
+                    ipAddress: normIp !== '-' ? normIp : (fb.ipAddress || '-'),
+                    msisdn: (u.msisdn && u.msisdn !== '-') ? u.msisdn : (fb.msisdn || '-')
+                });
+            });
+            return Array.from(map.values());
+        }
+
+        function getMaintenanceStatusLogs() {
+            const fallbackMap = getUnitFallbackInfoMap();
+            const map = new Map();
+            unitsData.forEach(u => {
+                const key = (u.code || '').trim().toUpperCase();
+                if (!key) return;
+                const fb = fallbackMap.get(key) || {};
+                const normIp = normalizeIpString(u.ipAddress);
+                const resolved = {
+                    ...u,
+                    code: key,
+                    type: u.type || fb.type || 'Dump Truck (HD)',
+                    cpeType: (u.cpeType && u.cpeType !== '-') ? u.cpeType : (fb.cpeType || '-'),
+                    cpeSn: (u.cpeSn && u.cpeSn !== '-') ? u.cpeSn : (fb.cpeSn || '-'),
+                    ipAddress: normIp !== '-' ? normIp : (fb.ipAddress || '-'),
+                    msisdn: (u.msisdn && u.msisdn !== '-') ? u.msisdn : (fb.msisdn || '-')
+                };
+                const prev = map.get(key);
+                if (!prev || resolved.maintStatus === 'Sudah' || prev.maintStatus !== 'Sudah') {
+                    map.set(key, resolved);
+                }
+            });
+            return Array.from(map.values());
+        }
+
+        // --- 4. TABLE RENDERERS ---
+        function renderPopulationTable() {
+            const tbody = document.getElementById('population-table-body');
+            const emptyState = document.getElementById('empty-population-state');
+            if (!tbody) return;
+
+            const allPop = getUniquePopulationUnits();
+            const activeCount = allPop.filter(u => u.status === 'Active').length;
+            const standbyCount = allPop.filter(u => u.status !== 'Active').length;
+
+            document.getElementById('pop-summary-total').textContent = allPop.length;
+            document.getElementById('pop-summary-active').textContent = activeCount;
+            document.getElementById('pop-summary-standby').textContent = standbyCount;
+
+            // Update filter tipe unit dinamis
+            const typeSelect = document.getElementById('filter-population-type');
+            if (typeSelect) {
+                const currentVal = typeSelect.value;
+                const uniqueTypes = [...new Set(allPop.map(u => u.type).filter(Boolean))];
+                typeSelect.innerHTML = `<option value="all">Semua Tipe Unit</option>` +
+                    uniqueTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+                if ([...typeSelect.options].some(o => o.value === currentVal)) typeSelect.value = currentVal;
+            }
+
+            // Deteksi IP Address duplikat antar unit
+            const ipCounts = {};
+            allPop.forEach(u => {
+                const ip = normalizeIpString(u.ipAddress);
+                if (ip !== '-') ipCounts[ip] = (ipCounts[ip] || 0) + 1;
+            });
+
+            const search = (document.getElementById('search-population')?.value || '').toLowerCase();
+            const statusFilter = document.getElementById('filter-population-status')?.value || 'all';
+            const typeFilter = document.getElementById('filter-population-type')?.value || 'all';
+
+            const filtered = allPop.filter(u => {
+                const matchSearch = !search ||
+                    (u.code || '').toLowerCase().includes(search) ||
+                    (u.type || '').toLowerCase().includes(search) ||
+                    (u.cpeSn || '').toLowerCase().includes(search) ||
+                    (u.ipAddress || '').toLowerCase().includes(search) ||
+                    (u.msisdn || '').toLowerCase().includes(search);
+                const matchStatus = statusFilter === 'all' ||
+                    (statusFilter === 'Active' ? u.status === 'Active' : u.status !== 'Active');
+                const matchType = typeFilter === 'all' || u.type === typeFilter;
+                return matchSearch && matchStatus && matchType;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyState?.classList.remove('hidden');
+                updateBulkButtons();
+                return;
+            }
+            emptyState?.classList.add('hidden');
+
+            tbody.innerHTML = filtered.map(u => {
+                const isChecked = selectedPopCodes.has(u.code);
+                const isActive = u.status === 'Active';
+                const cleanIp = normalizeIpString(u.ipAddress);
+                const ipValid = isValidIpv4OrDash(cleanIp);
+                const ipDuplicate = cleanIp !== '-' && (ipCounts[cleanIp] || 0) > 1;
+
+                let ipHtml = `<span class="font-mono text-slate-700 dark:text-slate-200">${cleanIp}</span>`;
+                if (!ipValid) {
+                    ipHtml = `<div class="flex flex-col"><span class="font-mono text-rose-500 font-semibold">${cleanIp}</span><span class="text-[9px] px-1.5 py-0.2 rounded bg-rose-500/15 text-rose-500 w-fit">Format IP Salah</span></div>`;
+                } else if (ipDuplicate) {
+                    ipHtml = `<div class="flex flex-col"><span class="font-mono text-amber-500 font-semibold">${cleanIp}</span><span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-500 w-fit">IP Duplikat</span></div>`;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50/80 dark:hover:bg-mine-800/40 transition">
+                        <td class="py-2.5 px-3">
+                            <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleRowSelect('pop', '${u.code}', this.checked)" class="rounded border-slate-300 dark:border-slate-600 text-amber-500 focus:ring-amber-500 cursor-pointer">
+                        </td>
+                        <td class="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white">${u.code}</td>
+                        <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300">${u.type}</td>
+                        <td class="py-2.5 px-3">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${isActive ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' : 'bg-slate-500/15 text-slate-400 border border-slate-500/30'}">
+                                ${isActive ? 'Active' : 'Standby / Dismantle'}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-slate-700 dark:text-slate-200">${u.cpeType || '-'}</td>
+                        <td class="py-2.5 px-3 font-mono text-slate-600 dark:text-slate-300">${u.cpeSn || '-'}</td>
+                        <td class="py-2.5 px-3">${ipHtml}</td>
+                        <td class="py-2.5 px-3 font-mono text-slate-600 dark:text-slate-300">${u.msisdn || '-'}</td>
+                        <td class="py-2.5 px-3 font-mono text-[11px] text-slate-500">${u.date || '-'}</td>
+                        <td class="py-2.5 px-3 text-right space-x-1 whitespace-nowrap">
+                            <button onclick="editUnit('${u.id}')" title="Edit Unit" class="p-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-amber-500/20 text-slate-600 dark:text-slate-300 hover:text-amber-500 transition">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="confirmDeletePopulationUnit('${u.code}')" title="Hapus dari Populasi" class="p-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-rose-500/20 text-slate-600 dark:text-slate-300 hover:text-rose-500 transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            updateBulkButtons();
+        }
+
+        function renderUnitsTable() {
+            const tbody = document.getElementById('units-table-body');
+            const emptyState = document.getElementById('empty-units-state');
+            if (!tbody) return;
+
+            const statusLogs = getMaintenanceStatusLogs();
+            const activePopUnits = getUniquePopulationUnits().filter(u => u.status === 'Active');
+            const doneList = statusLogs.filter(u => u.maintStatus === 'Sudah');
+            const doneCodes = new Set(doneList.map(u => u.code));
+            const pendingCount = activePopUnits.filter(u => !doneCodes.has(u.code)).length;
+
+            document.getElementById('status-summary-total').textContent = statusLogs.length;
+            document.getElementById('status-summary-done').textContent = doneList.length;
+            document.getElementById('status-summary-pending').textContent = pendingCount;
+
+            const search = (document.getElementById('search-unit')?.value || '').toLowerCase();
+            const progressFilter = document.getElementById('filter-maint-progress')?.value || 'all';
+
+            const filtered = statusLogs.filter(u => {
+                const matchSearch = !search ||
+                    (u.code || '').toLowerCase().includes(search) ||
+                    (u.type || '').toLowerCase().includes(search) ||
+                    (u.cpeType || '').toLowerCase().includes(search) ||
+                    (u.cpeSn || '').toLowerCase().includes(search) ||
+                    (u.ipAddress || '').toLowerCase().includes(search);
+                const matchProgress = progressFilter === 'all' || u.maintStatus === progressFilter;
+                return matchSearch && matchProgress;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyState?.classList.remove('hidden');
+                updateBulkButtons();
+                return;
+            }
+            emptyState?.classList.add('hidden');
+
+            tbody.innerHTML = filtered.map(u => {
+                const isDone = u.maintStatus === 'Sudah';
+                const isChecked = selectedUnitIds.has(u.id);
+                return `
+                    <tr class="hover:bg-slate-50/80 dark:hover:bg-mine-800/40 transition">
+                        <td class="py-2.5 px-3">
+                            <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleRowSelect('unit', '${u.id}', this.checked)" class="rounded border-slate-300 dark:border-slate-600 text-amber-500 focus:ring-amber-500 cursor-pointer">
+                        </td>
+                        <td class="py-2.5 px-3">
+                            <div class="font-mono font-bold text-slate-900 dark:text-white">${u.code}</div>
+                            <div class="text-[11px] text-slate-500">${u.type}</div>
+                        </td>
+                        <td class="py-2.5 px-3">
+                            <div class="text-slate-700 dark:text-slate-200 font-medium">${u.cpeType || '-'}</div>
+                            <div class="text-[11px] font-mono text-slate-500">SN: ${u.cpeSn || '-'} &bull; IP: ${normalizeIpString(u.ipAddress)}</div>
+                        </td>
+                        <td class="py-2.5 px-3">
+                            <button onclick="toggleMaintStatus('${u.id}')" title="Klik untuk ubah status" class="px-2.5 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1.5 w-fit ${isDone ? 'bg-teal-500/15 text-teal-500 border border-teal-500/30 hover:bg-teal-500/25' : 'bg-amber-500/15 text-amber-500 border border-amber-500/30 hover:bg-amber-500/25'}">
+                                <i class="fa-solid ${isDone ? 'fa-circle-check' : 'fa-clock'}"></i>
+                                <span>${isDone ? 'Close' : 'Belum Maintenance'}</span>
+                            </button>
+                        </td>
+                        <td class="py-2.5 px-3">
+                            <div class="font-mono text-[11px] text-slate-600 dark:text-slate-300">${u.date || '-'}</div>
+                            <div class="text-[10px] text-slate-400">PIC: ${u.tech || '-'}</div>
+                        </td>
+                        <td class="py-2.5 px-3 text-right space-x-1 whitespace-nowrap">
+                            <button onclick="editUnit('${u.id}')" title="Edit Status" class="p-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-amber-500/20 text-slate-600 dark:text-slate-300 hover:text-amber-500 transition">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="confirmDeleteItem('unit', '${u.id}')" title="Hapus" class="p-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-rose-500/20 text-slate-600 dark:text-slate-300 hover:text-rose-500 transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            updateBulkButtons();
+        }
+
+        function renderLogsTable() {
+            const tbody = document.getElementById('logs-table-body');
+            const emptyState = document.getElementById('empty-logs-state');
+            if (!tbody) return;
+
+            const fallbackMap = getUnitFallbackInfoMap();
+            const search = (document.getElementById('search-logs')?.value || '').toLowerCase();
+            const typeFilter = document.getElementById('filter-log-type')?.value || 'all';
+
+            const filtered = [...unitsData].reverse().filter(u => {
+                const matchSearch = !search ||
+                    (u.code || '').toLowerCase().includes(search) ||
+                    (u.cpeSn || '').toLowerCase().includes(search) ||
+                    (u.reason || '').toLowerCase().includes(search) ||
+                    (u.action || '').toLowerCase().includes(search) ||
+                    (u.tech || '').toLowerCase().includes(search);
+                const matchType = typeFilter === 'all' || u.maintType === typeFilter;
+                return matchSearch && matchType;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyState?.classList.remove('hidden');
+                return;
+            }
+            emptyState?.classList.add('hidden');
+
+            tbody.innerHTML = filtered.map(u => {
+                const fb = fallbackMap.get((u.code || '').trim().toUpperCase()) || {};
+                const ipVal = normalizeIpString(u.ipAddress) !== '-' ? normalizeIpString(u.ipAddress) : (fb.ipAddress || '-');
+                const snVal = (u.cpeSn && u.cpeSn !== '-') ? u.cpeSn : (fb.cpeSn || '-');
+                return `
+                    <tr class="hover:bg-slate-50/80 dark:hover:bg-mine-800/40 transition">
+                        <td class="py-2.5 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-300 whitespace-nowrap">${u.date || '-'}</td>
+                        <td class="py-2.5 px-3">
+                            <div class="font-mono font-bold text-slate-900 dark:text-white">${u.code}</div>
+                            <div class="text-[11px] text-slate-500">${u.type}</div>
+                        </td>
+                        <td class="py-2.5 px-3">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/15 text-amber-500 border border-amber-500/30">${u.maintType}</span>
+                        </td>
+                        <td class="py-2.5 px-3">
+                            <div class="text-slate-700 dark:text-slate-200">${u.cpeType || fb.cpeType || '-'}</div>
+                            <div class="text-[11px] font-mono text-slate-500">SN: ${snVal} &bull; IP: ${ipVal}</div>
+                        </td>
+                        <td class="py-2.5 px-3 max-w-xs">
+                            <div class="text-slate-800 dark:text-slate-200 font-medium truncate" title="${u.reason || '-'}">Reason: ${u.reason || '-'}</div>
+                            <div class="text-[11px] text-slate-500 truncate" title="${u.action || '-'}">Action: ${u.action || '-'}</div>
+                        </td>
+                        <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300">${u.tech || '-'}</td>
+                        <td class="py-2.5 px-3 text-right space-x-1 whitespace-nowrap">
+                            <button onclick="editUnit('${u.id}')" title="Edit Log" class="p-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-amber-500/20 text-slate-600 dark:text-slate-300 hover:text-amber-500 transition">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="confirmDeleteItem('unit', '${u.id}')" title="Hapus Log" class="p-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-rose-500/20 text-slate-600 dark:text-slate-300 hover:text-rose-500 transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderCpeTable() {
+            const tbody = document.getElementById('cpe-table-body');
+            if (!tbody) return;
+
+            const readyCount = cpeData.filter(c => c.status === 'Ready').length;
+            const brokenCount = cpeData.filter(c => c.status === 'Rusak').length;
+
+            document.getElementById('cpe-summary-total').textContent = cpeData.length;
+            document.getElementById('cpe-summary-ready').textContent = readyCount;
+            document.getElementById('cpe-summary-broken').textContent = brokenCount;
+
+            const statusFilter = document.getElementById('filter-cpe-status')?.value || 'all';
+            const filtered = cpeData.filter(c => statusFilter === 'all' || c.status === statusFilter);
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-xs text-slate-500">Belum ada data perangkat CPE.</td></tr>`;
+                updateBulkButtons();
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(c => {
+                const isReady = c.status === 'Ready';
+                const isChecked = selectedCpeIds.has(c.id);
+                return `
+                    <tr class="hover:bg-slate-50/80 dark:hover:bg-mine-800/40 transition">
+                        <td class="py-2.5 px-3">
+                            <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleRowSelect('cpe', '${c.id}', this.checked)" class="rounded border-slate-300 dark:border-slate-600 text-cyan-500 focus:ring-cyan-500 cursor-pointer">
+                        </td>
+                        <td class="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white">${c.sn}</td>
+                        <td class="py-2.5 px-3 text-slate-700 dark:text-slate-200">${c.model}</td>
+                        <td class="py-2.5 px-3 font-mono text-slate-600 dark:text-slate-300">${normalizeIpString(c.ip)}</td>
+                        <td class="py-2.5 px-3 font-mono text-slate-600 dark:text-slate-300">${c.msisdn || '-'}</td>
+                        <td class="py-2.5 px-3">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${isReady ? 'bg-cyan-500/15 text-cyan-500 border border-cyan-500/30' : 'bg-rose-500/15 text-rose-500 border border-rose-500/30'}">
+                                ${isReady ? 'Stok CPE Ready' : 'CPE Rusak'}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-slate-500 dark:text-slate-400 max-w-xs truncate">${c.note || '-'}</td>
+                        <td class="py-2.5 px-3 text-right space-x-1 whitespace-nowrap">
+                            <button onclick="editCpe('${c.id}')" title="Edit CPE" class="p-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-cyan-500/20 text-slate-600 dark:text-slate-300 hover:text-cyan-500 transition">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="confirmDeleteItem('cpe', '${c.id}')" title="Hapus CPE" class="p-1.5 rounded-lg bg-slate-100 dark:bg-mine-800 hover:bg-rose-500/20 text-slate-600 dark:text-slate-300 hover:text-rose-500 transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            updateBulkButtons();
+        }
+
+        function updateCnUnitSuggestions() {
+            const datalist = document.getElementById('cn-unit-suggestions');
+            if (!datalist) return;
+            const uniqueUnits = getUniquePopulationUnits();
+            datalist.innerHTML = uniqueUnits.map(u => `<option value="${u.code}">${u.type} (${u.status})</option>`).join('');
+        }
+
+        function setSelectValueWithFallback(selectEl, val, defaultVal) {
+            if (!selectEl) return;
+            const targetVal = (val && val.trim()) ? val.trim() : defaultVal;
+            const exists = Array.from(selectEl.options).some(opt => opt.value === targetVal);
+            if (!exists && targetVal) {
+                const opt = document.createElement('option');
+                opt.value = targetVal;
+                opt.textContent = targetVal;
+                selectEl.appendChild(opt);
+            }
+            selectEl.value = targetVal;
+        }
+
+        function autoFillByCnUnit(codeVal) {
+            const key = (codeVal || '').trim().toUpperCase();
+            if (!key) return;
+            const fb = getUnitFallbackInfoMap().get(key);
+            if (!fb) return;
+            const typeEl = document.getElementById('unit-type');
+            const cpeTypeEl = document.getElementById('unit-cpe-type');
+            const snEl = document.getElementById('unit-cpe-sn');
+            const ipEl = document.getElementById('unit-ip-address');
+            const msisdnEl = document.getElementById('unit-msisdn');
+            if (typeEl && fb.type) typeEl.value = fb.type;
+            if (cpeTypeEl && fb.cpeType && fb.cpeType !== '-') setSelectValueWithFallback(cpeTypeEl, fb.cpeType, 'R5020-5G');
+            if (snEl && !snEl.value && fb.cpeSn !== '-') snEl.value = fb.cpeSn;
+            if (ipEl && !ipEl.value && fb.ipAddress !== '-') ipEl.value = fb.ipAddress;
+            if (msisdnEl && !msisdnEl.value && fb.msisdn !== '-') msisdnEl.value = fb.msisdn;
+        }
+
+        function handleMaintTypeChange(maintType) {
+            const pickerBox = document.getElementById('ready-cpe-picker-box');
+            const selectEl = document.getElementById('ready-cpe-select');
+            const badgeEl = document.getElementById('ready-cpe-count-badge');
+            if (!pickerBox || !selectEl) return;
+
+            if (maintType === 'Installasi' || maintType === 'Replace CPE') {
+                const readyList = cpeData.filter(c => c.status === 'Ready');
+                pickerBox.classList.remove('hidden');
+                if (badgeEl) badgeEl.textContent = `${readyList.length} Ready`;
+                selectEl.innerHTML = `<option value="">-- Pilih Perangkat dari Stok CPE Ready --</option>` +
+                    readyList.map(c => `<option value="${c.id}">${c.sn} | ${c.model} | IP: ${normalizeIpString(c.ip)}</option>`).join('');
+            } else {
+                pickerBox.classList.add('hidden');
+                selectEl.value = '';
+            }
+        }
+
+        function applySelectedReadyCpe(cpeId) {
+            if (!cpeId) return;
+            const cpe = cpeData.find(c => c.id === cpeId);
+            if (!cpe) return;
+            setSelectValueWithFallback(document.getElementById('unit-cpe-type'), cpe.model, 'R5020-5G');
+            document.getElementById('unit-cpe-sn').value = cpe.sn || '';
+            document.getElementById('unit-ip-address').value = normalizeIpString(cpe.ip) === '-' ? '' : normalizeIpString(cpe.ip);
+            document.getElementById('unit-msisdn').value = cpe.msisdn || '';
+        }
+
+        function consumeFromReadyCpeStock(sn, selectedCpeId) {
+            const cleanSn = (sn || '').trim().toUpperCase();
+            const idx = cpeData.findIndex(c => c.status === 'Ready' && (c.id === selectedCpeId || (cleanSn && (c.sn || '').trim().toUpperCase() === cleanSn)));
+            if (idx !== -1) {
+                cpeData.splice(idx, 1);
+            }
+        }
+
+        function handleReplaceCpeWorkflow(oldSn, oldModel, oldIp, oldMsisdn, unitCode) {
+            const cleanOldSn = (oldSn || '').trim().toUpperCase();
+            if (!cleanOldSn || cleanOldSn === '-') return;
+            const exists = cpeData.some(c => (c.sn || '').trim().toUpperCase() === cleanOldSn);
+            if (!exists) {
+                cpeData.unshift({
+                    id: 'c_' + Date.now() + Math.floor(Math.random() * 100),
+                    sn: cleanOldSn,
+                    model: oldModel || 'Rajant BreadCrumb ES1',
+                    ip: normalizeIpString(oldIp),
+                    msisdn: oldMsisdn || '-',
+                    status: 'Rusak',
+                    note: `Dilepas dari unit ${unitCode} (Replace CPE)`
+                });
+            }
+        }
+
+        function saveUnit(e) {
+            e.preventDefault();
+            const editId = document.getElementById('edit-unit-id').value;
+            const code = (document.getElementById('unit-code').value || '').trim().toUpperCase();
+            const type = document.getElementById('unit-type').value;
+            const cpeType = document.getElementById('unit-cpe-type').value;
+            const cpeSn = (document.getElementById('unit-cpe-sn').value || '').trim().toUpperCase() || '-';
+            const ipAddress = normalizeIpString(document.getElementById('unit-ip-address').value);
+            const msisdn = (document.getElementById('unit-msisdn').value || '').trim() || '-';
+            const maintType = document.getElementById('maint-type').value;
+            const maintStatus = document.getElementById('maint-status').value;
+            const reason = (document.getElementById('maint-reason')?.value || '').trim() || '-';
+            const action = (document.getElementById('maint-action')?.value || '').trim() || '-';
+            const tech = (document.getElementById('maint-tech')?.value || '').trim() || '-';
+            const date = document.getElementById('maint-date')?.value || new Date().toISOString().slice(0, 10);
+            const selectedReadyCpeId = document.getElementById('ready-cpe-select')?.value || '';
+
+            if (!code) {
+                showToast('CN Unit wajib diisi!', 'error');
+                return;
+            }
+            if (!isValidIpv4OrDash(ipAddress)) {
+                showToast('Format IP Address tidak valid! Contoh: 10.24.10.101', 'error');
+                return;
+            }
+
+            const prevUnitInfo = getUnitFallbackInfoMap().get(code);
+            const resolvedIp = ipAddress !== '-' ? ipAddress : (prevUnitInfo?.ipAddress || '-');
+            const resolvedSn = cpeSn !== '-' ? cpeSn : (prevUnitInfo?.cpeSn || '-');
+            const resolvedMsisdn = msisdn !== '-' ? msisdn : (prevUnitInfo?.msisdn || '-');
+            const unitStatus = maintType === 'Dismantle' ? 'Standby' : 'Active';
+
+            // Tutup entri Belum Maintenance sebelumnya untuk CN Unit ini
+            unitsData.forEach(u => {
+                if ((u.code || '').trim().toUpperCase() === code && u.maintStatus === 'Belum') {
+                    u.maintStatus = 'Sudah';
+                }
+            });
+
+            if (editId) {
+                const idx = unitsData.findIndex(u => u.id === editId);
+                if (idx !== -1) {
+                    const existingStatus = unitsData[idx].status || 'Active';
+                    const nextStatus = maintType === 'Dismantle' ? 'Standby' : (existingStatus === 'Standby' ? 'Active' : existingStatus);
+                    unitsData[idx] = {
+                        ...unitsData[idx],
+                        code, type, status: nextStatus, cpeType, cpeSn: resolvedSn,
+                        ipAddress: resolvedIp, msisdn: resolvedMsisdn,
+                        maintType, maintStatus, reason, action, tech, date
+                    };
+                }
+                showToast(`Data ${code} berhasil diperbarui & dikirim ke Spreadsheet.`, 'success');
+            } else {
+                if (maintType === 'Installasi' || maintType === 'Replace CPE') {
+                    if (maintType === 'Replace CPE' && prevUnitInfo && prevUnitInfo.cpeSn !== resolvedSn) {
+                        handleReplaceCpeWorkflow(prevUnitInfo.cpeSn, prevUnitInfo.cpeType, prevUnitInfo.ipAddress, prevUnitInfo.msisdn, code);
+                    }
+                    consumeFromReadyCpeStock(resolvedSn, selectedReadyCpeId);
+                }
+
+                unitsData.push({
+                    id: 'u_' + Date.now(),
+                    code, type, status: unitStatus, cpeType, cpeSn: resolvedSn,
+                    ipAddress: resolvedIp, msisdn: resolvedMsisdn,
+                    maintType, maintStatus, reason, action, tech, date
+                });
+                showToast(`Data ${code} (${maintType}) berhasil disimpan & dikirim ke Spreadsheet.`, 'success');
+            }
+
+            saveDataToStorage(false, true);
+            refreshAllViews();
+            closeModal('unitModal');
+        }
+
+        function editUnit(id) {
+            const unit = unitsData.find(u => u.id === id);
+            if (!unit) return;
+            const fb = getUnitFallbackInfoMap().get((unit.code || '').trim().toUpperCase()) || {};
+
+            document.getElementById('unitModalTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-amber-500"></i><span>Edit Data Unit & Maintenance</span>`;
+            document.getElementById('edit-unit-id').value = unit.id;
+            document.getElementById('unit-code').value = unit.code || '';
+            document.getElementById('unit-type').value = unit.type || 'Dump Truck (HD)';
+            setSelectValueWithFallback(document.getElementById('unit-cpe-type'), unit.cpeType || fb.cpeType, 'R5020-5G');
+            document.getElementById('unit-cpe-sn').value = (unit.cpeSn && unit.cpeSn !== '-') ? unit.cpeSn : (fb.cpeSn !== '-' ? fb.cpeSn : '');
+            const ipVal = normalizeIpString(unit.ipAddress) !== '-' ? normalizeIpString(unit.ipAddress) : (fb.ipAddress || '-');
+            document.getElementById('unit-ip-address').value = ipVal === '-' ? '' : ipVal;
+            const msisdnVal = (unit.msisdn && unit.msisdn !== '-') ? unit.msisdn : (fb.msisdn || '-');
+            document.getElementById('unit-msisdn').value = msisdnVal === '-' ? '' : msisdnVal;
+            document.getElementById('maint-type').value = unit.maintType || 'Maintenance';
+            document.getElementById('maint-status').value = unit.maintStatus || 'Sudah';
+            if (document.getElementById('maint-reason')) document.getElementById('maint-reason').value = unit.reason === '-' ? '' : (unit.reason || '');
+            if (document.getElementById('maint-action')) document.getElementById('maint-action').value = unit.action === '-' ? '' : (unit.action || '');
+            if (document.getElementById('maint-tech')) document.getElementById('maint-tech').value = unit.tech === '-' ? '' : (unit.tech || '');
+            if (document.getElementById('maint-date')) document.getElementById('maint-date').value = unit.date || new Date().toISOString().slice(0, 10);
+
+            handleMaintTypeChange(unit.maintType || 'Maintenance');
+            const modal = document.getElementById('unitModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function toggleMaintStatus(id) {
+            const unit = unitsData.find(u => u.id === id);
+            if (!unit) return;
+            const nextStatus = unit.maintStatus === 'Sudah' ? 'Belum' : 'Sudah';
+            const code = (unit.code || '').trim().toUpperCase();
+            unitsData.forEach(u => {
+                if ((u.code || '').trim().toUpperCase() === code) {
+                    u.maintStatus = nextStatus;
+                }
+            });
+            saveDataToStorage();
+            refreshAllViews();
+            showToast(`Status ${code} diubah menjadi ${nextStatus === 'Sudah' ? 'Close' : 'Belum Maintenance'}.`, 'info');
+        }
+
+        function saveCpe(e) {
+            e.preventDefault();
+            const editId = document.getElementById('edit-cpe-id').value;
+            const sn = (document.getElementById('cpe-sn').value || '').trim().toUpperCase();
+            const model = document.getElementById('cpe-model').value;
+            const ip = normalizeIpString(document.getElementById('cpe-ip').value);
+            const msisdn = (document.getElementById('cpe-msisdn').value || '').trim() || '-';
+            const status = document.getElementById('cpe-status').value;
+            const note = (document.getElementById('cpe-note').value || '').trim() || '-';
+
+            if (!sn) {
+                showToast('Serial Number wajib diisi!', 'error');
+                return;
+            }
+            if (!isValidIpv4OrDash(ip)) {
+                showToast('Format IP Address CPE tidak valid!', 'error');
+                return;
+            }
+
+            if (editId) {
+                const idx = cpeData.findIndex(c => c.id === editId);
+                if (idx !== -1) cpeData[idx] = { ...cpeData[idx], sn, model, ip, msisdn, status, note };
+                showToast(`Stok CPE ${sn} diperbarui.`, 'success');
+            } else {
+                cpeData.unshift({ id: 'c_' + Date.now(), sn, model, ip, msisdn, status, note });
+                showToast(`Stok CPE ${sn} ditambahkan.`, 'success');
+            }
+
+            saveDataToStorage();
+            refreshAllViews();
+            closeModal('cpeModal');
+        }
+
+        function editCpe(id) {
+            const cpe = cpeData.find(c => c.id === id);
+            if (!cpe) return;
+            document.getElementById('cpeModalTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-cyan-500"></i><span>Edit Stok CPE</span>`;
+            document.getElementById('edit-cpe-id').value = cpe.id;
+            document.getElementById('cpe-sn').value = cpe.sn || '';
+            document.getElementById('cpe-model').value = cpe.model || 'Rajant BreadCrumb ES1';
+            const ipVal = normalizeIpString(cpe.ip);
+            document.getElementById('cpe-ip').value = ipVal === '-' ? '' : ipVal;
+            document.getElementById('cpe-msisdn').value = cpe.msisdn === '-' ? '' : (cpe.msisdn || '');
+            document.getElementById('cpe-status').value = cpe.status || 'Ready';
+            document.getElementById('cpe-note').value = cpe.note === '-' ? '' : (cpe.note || '');
+
+            const modal = document.getElementById('cpeModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // --- 6. SELECTION & DELETE HANDLERS ---
+        function toggleRowSelect(target, key, checked) {
+            const set = target === 'pop' ? selectedPopCodes : (target === 'unit' ? selectedUnitIds : selectedCpeIds);
+            if (checked) set.add(key);
+            else set.delete(key);
+            updateBulkButtons();
+        }
+
+        function toggleSelectAll(target, checked) {
+            if (target === 'pop') {
+                selectedPopCodes.clear();
+                if (checked) getUniquePopulationUnits().forEach(u => selectedPopCodes.add(u.code));
+                renderPopulationTable();
+            } else if (target === 'unit') {
+                selectedUnitIds.clear();
+                if (checked) getMaintenanceStatusLogs().forEach(u => selectedUnitIds.add(u.id));
+                renderUnitsTable();
+            } else if (target === 'cpe') {
+                selectedCpeIds.clear();
+                if (checked) cpeData.forEach(c => selectedCpeIds.add(c.id));
+                renderCpeTable();
+            }
+        }
+
+        function updateBulkButtons() {
+            const popBtn = document.getElementById('btn-bulk-delete-pop');
+            const popCount = document.getElementById('count-selected-pop');
+            if (popBtn && popCount) {
+                popCount.textContent = selectedPopCodes.size;
+                popBtn.classList.toggle('hidden', selectedPopCodes.size === 0);
+            }
+
+            const unitBtn = document.getElementById('btn-bulk-delete-unit');
+            const unitCount = document.getElementById('count-selected-unit');
+            if (unitBtn && unitCount) {
+                unitCount.textContent = selectedUnitIds.size;
+                unitBtn.classList.toggle('hidden', selectedUnitIds.size === 0);
+            }
+
+            const cpeBtn = document.getElementById('btn-bulk-delete-cpe');
+            const cpeCount = document.getElementById('count-selected-cpe');
+            if (cpeBtn && cpeCount) {
+                cpeCount.textContent = selectedCpeIds.size;
+                cpeBtn.classList.toggle('hidden', selectedCpeIds.size === 0);
+            }
+        }
+
+        function openDeleteConfirm(msg, onConfirm) {
+            document.getElementById('deleteModalMsg').textContent = msg;
+            const btn = document.getElementById('confirmDeleteBtn');
+            btn.onclick = () => {
+                onConfirm();
+                closeModal('deleteModal');
+            };
+            const modal = document.getElementById('deleteModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function confirmDeletePopulationUnit(code) {
+            openDeleteConfirm(`Hapus seluruh data populasi & riwayat untuk unit ${code}?`, () => {
+                unitsData = unitsData.filter(u => (u.code || '').trim().toUpperCase() !== code);
+                selectedPopCodes.delete(code);
+                saveDataToStorage();
+                refreshAllViews();
+                showToast(`Unit ${code} dihapus dari populasi.`, 'success');
+            });
+        }
+
+        function confirmDeleteItem(target, id) {
+            openDeleteConfirm('Hapus item ini secara permanen?', () => {
+                if (target === 'unit') {
+                    unitsData = unitsData.filter(u => u.id !== id);
+                    selectedUnitIds.delete(id);
+                } else {
+                    cpeData = cpeData.filter(c => c.id !== id);
+                    selectedCpeIds.delete(id);
+                }
+                saveDataToStorage();
+                refreshAllViews();
+                showToast('Data berhasil dihapus.', 'success');
+            });
+        }
+
+        function confirmBulkDelete(target) {
+            const count = target === 'pop' ? selectedPopCodes.size : (target === 'unit' ? selectedUnitIds.size : selectedCpeIds.size);
+            if (count === 0) return;
+            openDeleteConfirm(`Hapus ${count} data terpilih secara permanen?`, () => {
+                if (target === 'pop') {
+                    unitsData = unitsData.filter(u => !selectedPopCodes.has((u.code || '').trim().toUpperCase()));
+                    selectedPopCodes.clear();
+                } else if (target === 'unit') {
+                    unitsData = unitsData.filter(u => !selectedUnitIds.has(u.id));
+                    selectedUnitIds.clear();
+                } else {
+                    cpeData = cpeData.filter(c => !selectedCpeIds.has(c.id));
+                    selectedCpeIds.clear();
+                }
+                saveDataToStorage();
+                refreshAllViews();
+                showToast(`${count} data berhasil dihapus.`, 'success');
+            });
+        }
+
+        function confirmClearAll(target) {
+            const label = target === 'unit' ? 'seluruh data Populasi & Maintenance' : 'seluruh data Stok CPE';
+            openDeleteConfirm(`Yakin ingin menghapus ${label}?`, () => {
+                if (target === 'unit') {
+                    unitsData = [];
+                    selectedPopCodes.clear();
+                    selectedUnitIds.clear();
+                } else {
+                    cpeData = [];
+                    selectedCpeIds.clear();
+                }
+                saveDataToStorage();
+                refreshAllViews();
+                showToast(`Semua data ${target === 'unit' ? 'populasi' : 'CPE'} dibersihkan.`, 'success');
+            });
+        }
+
+        // --- 7. MODAL, THEME, TOAST & EXCEL IMPORT/EXPORT ---
+        function openModal(modalId) {
+            if (modalId === 'unitModal') {
+                document.getElementById('unitForm').reset();
+                document.getElementById('edit-unit-id').value = '';
+                document.getElementById('unitModalTitle').innerHTML = `<i class="fa-solid fa-truck-monster text-amber-500"></i><span>Input Data Unit & Maintenance</span>`;
+                if (document.getElementById('maint-date')) {
+                    document.getElementById('maint-date').value = new Date().toISOString().slice(0, 10);
+                }
+                handleMaintTypeChange('Maintenance');
+                updateCnUnitSuggestions();
+            } else if (modalId === 'cpeModal') {
+                document.getElementById('cpeForm').reset();
+                document.getElementById('edit-cpe-id').value = '';
+                document.getElementById('cpeModalTitle').innerHTML = `<i class="fa-solid fa-satellite-dish text-cyan-500"></i><span>Input Stok Perangkat CPE</span>`;
+            } else if (modalId === 'gsheetModal') {
+                loadGsheetSettingsUI();
+            }
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.toggle('dark');
+            localStorage.setItem('minetech_theme', isDark ? 'dark' : 'light');
+            const icon = document.getElementById('theme-icon');
+            if (icon) icon.className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon text-slate-700';
+            renderDashboard();
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const colors = {
+                success: 'bg-emerald-600 text-white border-emerald-400',
+                error: 'bg-rose-600 text-white border-rose-400',
+                info: 'bg-slate-800 text-white border-slate-600'
+            };
+            const el = document.createElement('div');
+            el.className = `px-3.5 py-2 rounded-lg border shadow-lg text-xs font-medium flex items-center gap-2 transition-all ${colors[type] || colors.info}`;
+            el.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info'}"></i><span>${message}</span>`;
+            container.appendChild(el);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 300);
+            }, 3200);
+        }
+
+        function getExcelCellValue(row, aliases) {
+            const keys = Object.keys(row || {});
+            for (const alias of aliases) {
+                const normAlias = alias.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const foundKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === normAlias);
+                if (foundKey !== undefined && row[foundKey] !== undefined && String(row[foundKey]).trim() !== '') {
+                    return String(row[foundKey]).trim();
+                }
+            }
+            return '';
+        }
+
+        function processExcelImport(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('import-file');
+            const target = document.getElementById('import-target').value;
+            const mode = document.getElementById('import-mode').value;
+            const file = fileInput?.files?.[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const workbook = XLSX.read(evt.target.result, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' });
+
+                    if (target === 'units') {
+                        const imported = rows.map((r, i) => {
+                            const code = getExcelCellValue(r, ['CN Unit', 'CN', 'Code', 'Unit', 'Nomor Unit']).toUpperCase();
+                            if (!code) return null;
+                            const rawIp = getExcelCellValue(r, ['IP Address', 'IP', 'IP_Address', 'IP CPE', 'Alamat IP', 'IP Modem', 'IP Radio']);
+                            return {
+                                id: 'u_' + Date.now() + '_' + i,
+                                code,
+                                type: getExcelCellValue(r, ['Tipe Unit', 'Type', 'Jenis Unit']) || 'Dump Truck (HD)',
+                                status: getExcelCellValue(r, ['Status Unit', 'Status']) || 'Active',
+                                cpeType: getExcelCellValue(r, ['Type CPE', 'Model CPE', 'CPE']) || 'Rajant BreadCrumb ES1',
+                                cpeSn: (getExcelCellValue(r, ['Serial Number', 'SN', 'SN CPE']) || '-').toUpperCase(),
+                                ipAddress: normalizeIpString(rawIp),
+                                msisdn: getExcelCellValue(r, ['MSISDN', 'No SIM', 'Kartu']) || '-',
+                                maintType: getExcelCellValue(r, ['Kategori Pekerjaan', 'Maintenance Type', 'Kategori']) || 'Maintenance',
+                                maintStatus: /close|sudah/i.test(getExcelCellValue(r, ['Status Pekerjaan', 'Status Maintenance'])) ? 'Sudah' : 'Belum',
+                                reason: getExcelCellValue(r, ['Reason', 'Keterangan', 'Masalah']) || '-',
+                                action: getExcelCellValue(r, ['Action', 'Tindakan']) || '-',
+                                tech: getExcelCellValue(r, ['Teknisi PIC', 'Teknisi', 'PIC']) || '-',
+                                date: getExcelCellValue(r, ['Tanggal', 'Date']) || new Date().toISOString().slice(0, 10)
+                            };
+                        }).filter(Boolean);
+
+                        unitsData = mode === 'replace' ? imported : [...unitsData, ...imported];
+                        showToast(`Berhasil mengimpor ${imported.length} data Populasi Unit.`, 'success');
+                        saveDataToStorage(false, true);
+                        refreshAllViews();
+                        closeModal('importModal');
+                        return;
+                    } else {
+                        const importedCpe = rows.map((r, i) => {
+                            const sn = getExcelCellValue(r, ['Serial Number', 'SN']).toUpperCase();
+                            if (!sn) return null;
+                            const rawIp = getExcelCellValue(r, ['IP Address', 'IP', 'IP_Address', 'Alamat IP']);
+                            return {
+                                id: 'c_' + Date.now() + '_' + i,
+                                sn,
+                                model: getExcelCellValue(r, ['Model Perangkat', 'Model CPE', 'Type CPE', 'Model']) || 'Rajant BreadCrumb ES1',
+                                ip: normalizeIpString(rawIp),
+                                msisdn: getExcelCellValue(r, ['MSISDN', 'No SIM']) || '-',
+                                status: /rusak|rma|broken/i.test(getExcelCellValue(r, ['Kondisi', 'Kondisi Stok', 'Status'])) ? 'Rusak' : 'Ready',
+                                note: getExcelCellValue(r, ['Keterangan', 'Note', 'Diagnosa']) || '-'
+                            };
+                        }).filter(Boolean);
+
+                        cpeData = mode === 'replace' ? importedCpe : [...cpeData, ...importedCpe];
+                        showToast(`Berhasil mengimpor ${importedCpe.length} perangkat CPE.`, 'success');
+                    }
+
+                    saveDataToStorage();
+                    refreshAllViews();
+                    closeModal('importModal');
+                } catch (err) {
+                    console.error(err);
+                    showToast('Gagal membaca file Excel/CSV.', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function downloadExcelTemplate() {
+            const target = document.getElementById('import-target')?.value || 'units';
+            const wb = XLSX.utils.book_new();
+            if (target === 'units') {
+                const sample = [{
+                    'CN Unit': 'HD-78505',
+                    'Tipe Unit': 'Dump Truck (HD)',
+                    'Status Unit': 'Active',
+                    'Type CPE': 'R5020-5G',
+                    'Serial Number': 'SN-5G-1001',
+                    'IP Address': '10.24.10.105',
+                    'MSISDN': '628115400105',
+                    'Kategori Pekerjaan': 'Maintenance',
+                    'Status Pekerjaan': 'Close',
+                    'Reason': 'Jadwal PM rutin',
+                    'Action': 'Pengecekan perangkat CPE',
+                    'Teknisi PIC': 'Budi Santoso',
+                    'Tanggal': new Date().toISOString().slice(0, 10)
+                }];
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sample), 'Populasi_Unit');
+                XLSX.writeFile(wb, 'Template_Import_Populasi_Unit.xlsx');
+            } else {
+                const sampleCpe = [{
+                    'Serial Number': 'SN-5G-2001',
+                    'Model Perangkat': 'R5020-5G',
+                    'IP Address': '10.24.10.220',
+                    'MSISDN': '628115409220',
+                    'Kondisi': 'Ready',
+                    'Keterangan': 'Stok baru siap pasang'
+                }];
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sampleCpe), 'Stok_CPE');
+                XLSX.writeFile(wb, 'Template_Import_Stok_CPE.xlsx');
+            }
+            showToast('Template Excel berhasil diunduh.', 'success');
+        }
+
+        function saveDataToStorage(skipCloudSync = false, immediateSync = true) {
+            try {
+                cleanDuplicateEmptyMaintenanceLogs();
+                localStorage.setItem(STORAGE_KEY_UNITS, JSON.stringify(unitsData));
+                localStorage.setItem(STORAGE_KEY_CPE, JSON.stringify(cpeData));
+                hasLocalStoredData = true;
+                if (!skipCloudSync && !isPullingFromSheet) {
+                    hasUnsavedLocalChanges = true;
+                    lastLocalWriteAt = Date.now();
+                    // Otomatis aktifkan auto-save jika URL Google Sheets sudah terpasang
+                    if (getGsheetConfig().url && localStorage.getItem(STORAGE_KEY_GSHEET_AUTO) !== 'true') {
+                        localStorage.setItem(STORAGE_KEY_GSHEET_AUTO, 'true');
+                    }
+                    scheduleGoogleSheetSync(immediateSync);
+                }
+            } catch (e) {
+                console.error('Gagal menyimpan localStorage:', e);
+            }
+        }
+
+        function exportToCSV() {
+            const wb = XLSX.utils.book_new();
+            const popRows = getUniquePopulationUnits().map(u => ({
+                'CN Unit': u.code,
+                'Tipe Unit': u.type,
+                'Status Unit': u.status,
+                'Type CPE': u.cpeType,
+                'Serial Number': u.cpeSn,
+                'IP Address': normalizeIpString(u.ipAddress),
+                'MSISDN': u.msisdn,
+                'Update Terakhir': u.date
+            }));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(popRows), 'Populasi_Unit');
+            XLSX.writeFile(wb, `MineTech_Inventaris_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            showToast('Laporan berhasil diunduh.', 'success');
+        }
+
+        // --- 8. GOOGLE SPREADSHEET AUTO-SYNC & LINK SHARING ---
+        function getGsheetConfig() {
+            const savedUrl = (localStorage.getItem(STORAGE_KEY_GSHEET_URL) || DEFAULT_PUBLIC_GSHEET_URL || '').trim();
+            const rawAuto = localStorage.getItem(STORAGE_KEY_GSHEET_AUTO);
+            const auto = rawAuto === null ? true : rawAuto === 'true';
+            return { url: savedUrl, auto };
+        }
+
+        function bootstrapSharedSheetFromUrl() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const sharedSheet = (params.get('sheet') || '').trim();
+                if (sharedSheet && sharedSheet.includes('/exec')) {
+                    localStorage.setItem(STORAGE_KEY_GSHEET_URL, sharedSheet);
+                    localStorage.setItem(STORAGE_KEY_GSHEET_AUTO, 'true');
+                }
+            } catch (e) {
+                console.error('Gagal membaca parameter URL sheet:', e);
+            }
+        }
+
+        function updateGsheetStatusUI(connected, text, syncing = false) {
+            const dot = document.getElementById('gsheet-status-dot');
+            const label = document.getElementById('gsheet-last-sync-text');
+            const headerLabel = document.getElementById('gsheet-header-label');
+            const popBadge = document.getElementById('pop-realtime-badge');
+
+            if (dot) {
+                dot.className = `w-2 h-2 rounded-full ${syncing ? 'bg-amber-400 animate-ping' : (connected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400')}`;
+            }
+            if (label && text) label.textContent = text;
+            if (headerLabel) {
+                headerLabel.textContent = syncing ? 'Menyimpan...' : (connected ? 'Real-Time Sync' : 'Google Sheets');
+            }
+            if (popBadge) {
+                if (syncing) {
+                    popBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30';
+                    popBadge.innerHTML = '<i class="fa-solid fa-rotate fa-spin mr-1"></i>Menyimpan ke Sheet...';
+                } else if (connected) {
+                    popBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30';
+                    popBadge.innerHTML = '<i class="fa-solid fa-cloud-check mr-1"></i>Real-Time GSheet';
+                } else {
+                    popBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-slate-500/30';
+                    popBadge.textContent = 'Offline Lokal';
+                }
+            }
+        }
+
+        function loadGsheetSettingsUI() {
+            const cfg = getGsheetConfig();
+            const urlInput = document.getElementById('gsheet-webapp-url');
+            const autoToggle = document.getElementById('gsheet-auto-toggle');
+            if (urlInput) urlInput.value = cfg.url;
+            if (autoToggle) autoToggle.checked = cfg.auto;
+            updateGsheetStatusUI(Boolean(cfg.url), cfg.url ? 'Terhubung ke Google Spreadsheet' : 'Belum terhubung ke Google Spreadsheet');
+        }
+
+        function saveGsheetSettings(syncNow = false) {
+            const urlInput = document.getElementById('gsheet-webapp-url');
+            const autoToggle = document.getElementById('gsheet-auto-toggle');
+            const url = (urlInput ? urlInput.value : getGsheetConfig().url).trim();
+            const auto = autoToggle ? autoToggle.checked : true;
+
+            if (url && !url.includes('/exec')) {
+                showToast('Pastikan URL berakhiran /exec dari Deployment Web App Google Apps Script.', 'error');
+                return;
+            }
+
+            localStorage.setItem(STORAGE_KEY_GSHEET_URL, url);
+            localStorage.setItem(STORAGE_KEY_GSHEET_AUTO, String(auto));
+
+            if (url) {
+                updateGsheetStatusUI(true, 'Konfigurasi tersimpan');
+                if (syncNow) {
+                    pushToGoogleSheets(true).then(() => startAutoPollingIfConnected(true));
+                } else {
+                    startAutoPollingIfConnected(true);
+                }
+            } else {
+                clearInterval(gsheetPollInterval);
+                updateGsheetStatusUI(false, 'Belum terhubung ke Google Spreadsheet');
+            }
+        }
+
+        function scheduleGoogleSheetSync(immediate = false) {
+            const cfg = getGsheetConfig();
+            if (!cfg.url || !cfg.auto) return;
+            clearTimeout(gsheetSyncTimer);
+            gsheetSyncTimer = setTimeout(() => {
+                pushToGoogleSheets(false);
+            }, immediate ? 150 : 1200);
+        }
+
+        function buildSheetSyncPayload() {
+            return {
+                population: getUniquePopulationUnits().map(p => ({
+                    ...p,
+                    ipAddress: normalizeIpString(p.ipAddress),
+                    cpeSn: (p.cpeSn || '-').trim().toUpperCase(),
+                    msisdn: (p.msisdn || '-').trim()
+                })),
+                statusMaintenance: getMaintenanceStatusLogs().map(s => ({
+                    ...s,
+                    ipAddress: normalizeIpString(s.ipAddress),
+                    cpeSn: (s.cpeSn || '-').trim().toUpperCase()
+                })),
+                logs: unitsData.map(u => ({
+                    ...u,
+                    ipAddress: normalizeIpString(u.ipAddress),
+                    cpeSn: (u.cpeSn || '-').trim().toUpperCase(),
+                    msisdn: (u.msisdn || '-').trim()
+                })),
+                cpe: cpeData.map(c => ({
+                    ...c,
+                    sn: (c.sn || '-').trim().toUpperCase(),
+                    ip: normalizeIpString(c.ip),
+                    msisdn: (c.msisdn || '-').trim()
+                }))
+            };
+        }
+
+        function sendViaHiddenFormPost(url, jsonString) {
+            try {
+                const iframeName = 'gsheet_post_frame_' + Date.now();
+                const iframe = document.createElement('iframe');
+                iframe.name = iframeName;
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                form.target = iframeName;
+                form.style.display = 'none';
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'payload';
+                input.value = jsonString;
+                form.appendChild(input);
+
+                document.body.appendChild(form);
+                form.submit();
+
+                setTimeout(() => {
+                    form.remove();
+                    iframe.remove();
+                }, 8000);
+            } catch (e) {
+                console.warn('Hidden form post fallback error:', e);
+            }
+        }
+
+        async function pushToGoogleSheets(manual = false) {
+            const cfg = getGsheetConfig();
+            if (!cfg.url) return;
+            if (isPushingToSheet) {
+                // Antrekan ulang jika sedang ada proses kirim yang berjalan
+                clearTimeout(gsheetSyncTimer);
+                gsheetSyncTimer = setTimeout(() => pushToGoogleSheets(manual), 400);
+                return;
+            }
+            isPushingToSheet = true;
+            updateGsheetStatusUI(true, 'Menyimpan semua data ke Google Spreadsheet...', true);
+            const payload = buildSheetSyncPayload();
+            const bodyJson = JSON.stringify(payload);
+
+            try {
+                const res = await fetch(cfg.url, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: bodyJson
+                });
+                const text = await res.text();
+                let data = {};
+                try { data = JSON.parse(text); } catch (_) { data = { status: 'ok' }; }
+                if (data && data.status === 'error') {
+                    throw new Error(data.message || 'Gagal menulis ke Google Sheets');
+                }
+                hasUnsavedLocalChanges = false;
+                lastLocalWriteAt = Date.now();
+                const timeStr = new Date().toLocaleTimeString('id-ID');
+                updateGsheetStatusUI(true, `Tersimpan real-time pukul ${timeStr}`);
+                if (manual) showToast('Data berhasil dikirim ke Google Spreadsheet!', 'success');
+            } catch (err) {
+                // Fallback mode: 'no-cors' + hidden form POST jika sandbox/iframe membatasi fetch CORS
+                try {
+                    await fetch(cfg.url, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: bodyJson
+                    });
+                    sendViaHiddenFormPost(cfg.url, bodyJson);
+                    hasUnsavedLocalChanges = false;
+                    lastLocalWriteAt = Date.now();
+                    const timeStr = new Date().toLocaleTimeString('id-ID');
+                    updateGsheetStatusUI(true, `Terkirim ke Sheet pukul ${timeStr}`);
+                    if (manual) showToast('Data dikirim ke Google Spreadsheet!', 'success');
+                } catch (fallbackErr) {
+                    sendViaHiddenFormPost(cfg.url, bodyJson);
+                    console.error('Push GSheet gagal:', err, fallbackErr);
+                    updateGsheetStatusUI(true, 'Gagal menyimpan ke Google Sheets');
+                    if (manual) showToast('Gagal mengirim ke Google Spreadsheet. Periksa URL Web App.', 'error');
+                }
+            } finally {
+                isPushingToSheet = false;
+            }
+        }
+
+        function pullViaJsonp(url) {
+            return new Promise((resolve, reject) => {
+                const cbName = '__gsheetJsonpCb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+                const script = document.createElement('script');
+                const timer = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('JSONP timeout'));
+                }, 12000);
+
+                function cleanup() {
+                    clearTimeout(timer);
+                    delete window[cbName];
+                    if (script.parentNode) script.parentNode.removeChild(script);
+                }
+
+                window[cbName] = (data) => {
+                    cleanup();
+                    resolve(data);
+                };
+
+                script.onerror = () => {
+                    cleanup();
+                    reject(new Error('JSONP script load error'));
+                };
+
+                const sep = url.includes('?') ? '&' : '?';
+                script.src = `${url}${sep}callback=${cbName}&t=${Date.now()}`;
+                document.head.appendChild(script);
+            });
+        }
+
+        function applyPulledSheetData(data, silent = false) {
+            if (!data || data.status !== 'ok') {
+                throw new Error((data && data.message) || 'Gagal membaca data dari Apps Script');
+            }
+            const sheetLogs = Array.isArray(data.logs) && data.logs.length > 0 ? data.logs : (Array.isArray(data.population) ? data.population : []);
+            if (sheetLogs.length > 0) {
+                unitsData = sheetLogs.map((r, i) => ({
+                    id: 'u_' + Date.now() + '_' + i,
+                    code: (r['CN Unit'] || r.code || '').trim().toUpperCase(),
+                    type: r['Tipe Unit'] || r.type || 'Dump Truck (HD)',
+                    status: r['Status Unit'] || r.status || 'Active',
+                    cpeType: r['Type CPE'] || r.cpeType || '-',
+                    cpeSn: (r['Serial Number'] || r.cpeSn || '-').trim().toUpperCase(),
+                    ipAddress: normalizeIpString(r['IP Address'] || r.ipAddress),
+                    msisdn: r['MSISDN'] || r.msisdn || '-',
+                    maintType: r['Kategori Pekerjaan'] || r.maintType || 'Maintenance',
+                    maintStatus: /close|sudah/i.test(r['Status Pekerjaan'] || r.maintStatus || '') ? 'Sudah' : 'Belum',
+                    reason: r['Reason'] || r.reason || '-',
+                    action: r['Action'] || r.action || '-',
+                    tech: r['Teknisi PIC'] || r.tech || '-',
+                    date: r['Tanggal'] || r['Update Terakhir'] || r.date || '-'
+                })).filter(u => u.code);
+            }
+            if (Array.isArray(data.cpe) && data.cpe.length > 0) {
+                cpeData = data.cpe.map((c, i) => ({
+                    id: 'c_' + Date.now() + '_' + i,
+                    sn: (c['Serial Number'] || c.sn || '').trim().toUpperCase(),
+                    model: c['Model CPE'] || c['Model Perangkat'] || c.model || 'Rajant BreadCrumb ES1',
+                    ip: normalizeIpString(c['IP Address'] || c.ip),
+                    msisdn: c['MSISDN'] || c.msisdn || '-',
+                    status: /rusak|rma/i.test(c['Kondisi Stok'] || c.status || '') ? 'Rusak' : 'Ready',
+                    note: c['Keterangan'] || c.note || '-'
+                })).filter(c => c.sn);
+            }
+            saveDataToStorage(true);
+            refreshAllViews();
+            const timeStr = new Date().toLocaleTimeString('id-ID');
+            updateGsheetStatusUI(true, `Terbaharui dari Sheet pukul ${timeStr}`);
+            if (!silent) showToast('Data terbaru berhasil ditarik dari Google Spreadsheet!', 'success');
+        }
+
+        async function pullFromGoogleSheets(silent = false) {
+            const cfg = getGsheetConfig();
+            if (!cfg.url) {
+                if (!silent) showToast('Masukkan URL Web App Google Sheets terlebih dahulu.', 'error');
+                return;
+            }
+            if (isPullingFromSheet || isPushingToSheet) return;
+            // Jangan menimpa data lokal jika baru saja melakukan input dalam 12 detik terakhir
+            if (silent && (hasUnsavedLocalChanges || (Date.now() - lastLocalWriteAt) < 12000)) {
+                return;
+            }
+            isPullingFromSheet = true;
+            try {
+                const res = await fetch(`${cfg.url}${cfg.url.includes('?') ? '&' : '?'}t=${Date.now()}`, {
+                    method: 'GET',
+                    redirect: 'follow'
+                });
+                const data = await res.json();
+                applyPulledSheetData(data, silent);
+            } catch (err) {
+                try {
+                    const jsonpData = await pullViaJsonp(cfg.url);
+                    applyPulledSheetData(jsonpData, silent);
+                } catch (jsonpErr) {
+                    console.warn('Pull GSheet gagal:', err.message || err);
+                    updateGsheetStatusUI(true, 'Menunggu koneksi Google Sheets (cek akses Anyone)');
+                    if (!silent) showToast('Gagal menarik data dari Google Spreadsheet. Pastikan deployment berstatus "Anyone".', 'error');
+                }
+            } finally {
+                isPullingFromSheet = false;
+            }
+        }
+
+        function copyShareableLink() {
+            const cfg = getGsheetConfig();
+            const baseUrl = window.location.href.split('?')[0];
+            const shareUrl = cfg.url ? `${baseUrl}?sheet=${encodeURIComponent(cfg.url)}` : baseUrl;
+
+            const tempInput = document.createElement('input');
+            tempInput.value = shareUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showToast(cfg.url ? 'Link sinkronisasi berhasil disalin! Siap dibagikan ke perangkat lain.' : 'Link disalin (hubungkan Google Sheets dulu agar data otomatis sinkron).', 'success');
+        }
+
+        function copyAppsScriptCode() {
+            const ta = document.getElementById('apps-script-template');
+            if (!ta) return;
+            ta.select();
+            document.execCommand('copy');
+            showToast('Kode Google Apps Script berhasil disalin!', 'success');
+        }
+
+        function startAutoPollingIfConnected(skipInitialPull = false) {
+            const cfg = getGsheetConfig();
+            if (!cfg.url) return;
+            updateGsheetStatusUI(true, 'Sinkronisasi otomatis aktif');
+            if (!skipInitialPull) {
+                if (hasLocalStoredData && (unitsData.length > 0 || cpeData.length > 0)) {
+                    // Kirim data lokal terlebih dahulu agar input terakhir tidak tertimpa spreadsheet lama
+                    pushToGoogleSheets(false);
+                } else {
+                    pullFromGoogleSheets(true);
+                }
+            }
+            clearInterval(gsheetPollInterval);
+            gsheetPollInterval = setInterval(() => {
+                if (!document.hidden && !hasUnsavedLocalChanges && !isPushingToSheet && (Date.now() - lastLocalWriteAt) >= 12000) {
+                    pullFromGoogleSheets(true);
+                }
+            }, 25000);
+        }
+
+        function updateLiveClock() {
+            const el = document.getElementById('live-clock');
+            if (!el) return;
+            const now = new Date();
+            el.textContent = now.toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) +
+                ' • ' + now.toLocaleTimeString('id-ID');
+        }
+
+        // --- 9. INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('minetech_theme');
+            if (savedTheme === 'light') {
+                document.documentElement.classList.remove('dark');
+                const icon = document.getElementById('theme-icon');
+                if (icon) icon.className = 'fa-solid fa-moon text-slate-700';
+            }
+
+            bootstrapSharedSheetFromUrl();
+            loadDataFromStorage();
+            refreshAllViews();
+            updateLiveClock();
+            setInterval(updateLiveClock, 1000);
+            startAutoPollingIfConnected();
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden && getGsheetConfig().url && hasUnsavedLocalChanges) {
+                    const payload = JSON.stringify({
+                        population: getUniquePopulationUnits(),
+                        statusMaintenance: getMaintenanceStatusLogs(),
+                        logs: unitsData,
+                        cpe: cpeData
+                    });
+                    if (navigator.sendBeacon) {
+                        navigator.sendBeacon(getGsheetConfig().url, new Blob([payload], { type: 'text/plain;charset=utf-8' }));
+                    } else {
+                        pushToGoogleSheets(false);
+                    }
+                } else if (!document.hidden && getGsheetConfig().url && !hasUnsavedLocalChanges) {
+                    pullFromGoogleSheets(true);
+                }
+            });
+
+            window.addEventListener('beforeunload', () => {
+                const cfg = getGsheetConfig();
+                if (cfg.url && hasUnsavedLocalChanges && navigator.sendBeacon) {
+                    const payload = JSON.stringify({
+                        population: getUniquePopulationUnits(),
+                        statusMaintenance: getMaintenanceStatusLogs(),
+                        logs: unitsData,
+                        cpe: cpeData
+                    });
+                    navigator.sendBeacon(cfg.url, new Blob([payload], { type: 'text/plain;charset=utf-8' }));
+                }
+            });
+        });
+    </script>
+</body>
+</html>
