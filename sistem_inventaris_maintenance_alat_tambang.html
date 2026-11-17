@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mining Fleet & CPE Maintenance System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS (XLSX) untuk Import/Export Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Chart.js untuk Dashboard Diagram Batang & Line -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom Scrollbar untuk tabel agar nyaman di HP */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+        /* Ukuran tombol & input besar khusus operasional lapangan */
+        .field-input {
+            min-height: 48px;
+            font-size: 15px;
+        }
+        .field-btn {
+            min-height: 48px;
+            font-weight: 600;
+            transition: transform 0.1s ease, background-color 0.2s ease;
+        }
+        .field-btn:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body class="text-slate-800 pb-24 md:pb-8">
+
+    <!-- Toast Notification Container (Pengganti alert) -->
+    <div id="toastContainer" class="fixed top-4 right-4 left-4 md:left-auto z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Custom Confirmation Modal (Pengganti confirm) -->
+    <div id="confirmModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex items-center gap-3 text-amber-600 mb-3">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                <h3 id="confirmTitle" class="text-lg font-bold text-slate-900">Konfirmasi Tindakan</h3>
+            </div>
+            <p id="confirmMessage" class="text-slate-600 text-sm mb-6 leading-relaxed">Apakah Anda yakin ingin melanjutkan tindakan ini?</p>
+            <div class="grid grid-cols-2 gap-3">
+                <button id="confirmCancelBtn" class="field-btn rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 px-4">Batal</button>
+                <button id="confirmOkBtn" class="field-btn rounded-xl bg-red-600 hover:bg-red-700 text-white px-4">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Pengaturan Google Sheets Auto-Sync -->
+    <div id="gsheetModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 my-8">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-2 text-emerald-700">
+                    <i class="fa-solid fa-file-excel text-2xl"></i>
+                    <h3 class="text-lg font-bold text-slate-900">Koneksi Langsung Google Sheets</h3>
+                </div>
+                <button onclick="toggleModal('gsheetModal', false)" class="p-2 text-slate-400 hover:text-slate-700">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4 text-sm">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">1. Google Apps Script Web App URL (Auto-Save)</label>
+                    <input type="url" id="gsheetWebhookUrl" placeholder="https://script.google.com/macros/s/..." class="field-input w-full rounded-xl border border-slate-300 px-4 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <p class="text-xs text-slate-500 mt-1">Setiap kali data ditambah/diubah, aplikasi akan otomatis mengirim data ke Google Sheet secara real-time.</p>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">2. Link CSV Google Sheet (Untuk Import Data)</label>
+                    <input type="url" id="gsheetCsvUrl" placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv" class="field-input w-full rounded-xl border border-slate-300 px-4 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <p class="text-xs text-slate-500 mt-1">Pastikan akses Google Sheet diset ke "Siapa saja yang memiliki link" atau Publish to Web (CSV).</p>
+                </div>
+
+                <!-- Panduan Script Google Sheets -->
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-semibold text-xs text-slate-700">Kode Google Apps Script (Copy & Paste ke Extensions > Apps Script):</span>
+                        <button onclick="copyAppsScript()" class="text-xs bg-slate-800 text-white px-2.5 py-1 rounded-lg hover:bg-slate-700">
+                            <i class="fa-regular fa-copy mr-1"></i>Salin Kode
+                        </button>
+                    </div>
+                    <textarea id="appsScriptCode" readonly rows="4" class="w-full text-xs font-mono bg-slate-900 text-emerald-400 p-2 rounded-lg focus:outline-none">function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var payload = JSON.parse(e.postData.contents);
+  var sheetName = payload.sheet || "Data";
+  var sheet = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName);
+  sheet.clear();
+  if (payload.rows && payload.rows.length > 0) {
+    var headers = Object.keys(payload.rows[0]);
+    sheet.appendRow(headers);
+    payload.rows.forEach(function(row) {
+      sheet.appendRow(headers.map(function(h) { return row[h] !== undefined ? row[h] : ""; }));
+    });
+  }
+  return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
+}</textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <button onclick="saveGsheetSettings()" class="field-btn rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i>Simpan Koneksi
+                    </button>
+                    <button onclick="syncAllToGoogleSheets()" class="field-btn rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-4">
+                        <i class="fa-solid fa-cloud-arrow-up mr-2"></i>Sync Semua Sekarang
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header & Global Search Bar -->
+    <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <!-- Brand Title -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-extrabold text-xl shadow-md">
+                            <i class="fa-solid fa-truck-monster"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-extrabold text-base sm:text-lg tracking-tight leading-tight">MINING FLEET & CPE</h1>
+                            <p class="text-xs text-slate-400 flex items-center gap-1.5">
+                                <span id="syncStatusDot" class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+                                <span id="syncStatusText">Offline Storage Aktif</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Tombol Pengaturan Google Sheet Mobile -->
+                    <button onclick="toggleModal('gsheetModal', true)" class="md:hidden px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 text-xs font-semibold flex items-center gap-1.5">
+                        <i class="fa-solid fa-cloud"></i> G-Sheet
+                    </button>
+                </div>
+
+                <!-- Global Search Bar (CN Unit, IP Address, Serial Number) -->
+                <div class="flex items-center gap-2 flex-1 max-w-xl">
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="globalSearchInput" oninput="handleGlobalSearch()" placeholder="Cari CN Unit, IP Address, atau Serial Number..." class="w-full h-12 pl-10 pr-10 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-400 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+                        <button id="clearSearchBtn" onclick="clearGlobalSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </button>
+                    </div>
+                    <!-- Tombol Pengaturan Google Sheet Desktop -->
+                    <button onclick="toggleModal('gsheetModal', true)" class="hidden md:flex h-12 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 text-sm font-semibold items-center gap-2 shrink-0">
+                        <i class="fa-solid fa-table"></i> Google Sheets
+                    </button>
+                </div>
+            </div>
+
+            <!-- Desktop Navigation Tabs -->
+            <nav class="hidden md:flex gap-2 mt-3 pt-3 border-t border-slate-800 overflow-x-auto">
+                <button onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-tab px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 bg-amber-500 text-slate-950">
+                    <i class="fa-solid fa-chart-pie"></i> Dashboard
+                </button>
+                <button onclick="switchTab('populasi')" data-tab="populasi" class="nav-tab px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-slate-300 hover:bg-slate-800">
+                    <i class="fa-solid fa-truck-pickup"></i> Populasi Unit
+                </button>
+                <button onclick="switchTab('unit')" data-tab="unit" class="nav-tab px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-slate-300 hover:bg-slate-800">
+                    <i class="fa-solid fa-list-check"></i> Daftar Unit
+                </button>
+                <button onclick="switchTab('cpeReady')" data-tab="cpeReady" class="nav-tab px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-slate-300 hover:bg-slate-800">
+                    <i class="fa-solid fa-router"></i> Stok CPE Ready
+                </button>
+                <button onclick="switchTab('maintenance')" data-tab="maintenance" class="nav-tab px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-slate-300 hover:bg-slate-800">
+                    <i class="fa-solid fa-screwdriver-wrench"></i> Riwayat Maintenance
+                </button>
+                <button onclick="switchTab('cpeRusak')" data-tab="cpeRusak" class="nav-tab px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-slate-300 hover:bg-slate-800">
+                    <i class="fa-solid fa-triangle-exclamation"></i> CPE Rusak
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 pt-5">
+
+        <!-- ========================================================= -->
+        <!-- 1. TAB DASHBOARD                                          -->
+        <!-- ========================================================= -->
+        <section id="tab-dashboard" class="tab-content space-y-6">
+            <!-- Header & Export Global -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                <div>
+                    <h2 class="text-lg font-extrabold text-slate-900">Dashboard Monitoring Maintenance</h2>
+                    <p class="text-xs text-slate-500">Rekap otomatis unit sudah & belum maintenance serta ketersediaan stok CPE.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="exportAllWorkbook()" class="field-btn px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-file-excel"></i> Export Semua ke Excel
+                    </button>
+                    <button onclick="seedDemoData()" class="field-btn px-4 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-database"></i> Isi Data Contoh
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Populasi Unit</span>
+                        <span class="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-truck"></i></span>
+                    </div>
+                    <div id="statTotalUnit" class="text-2xl sm:text-3xl font-extrabold text-slate-900">0</div>
+                    <p class="text-xs text-slate-500 mt-1">Unit terdaftar di sistem</p>
+                </div>
+
+                <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-emerald-200 bg-gradient-to-br from-white to-emerald-50/40">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-700">Unit Sudah Maintenance</span>
+                        <span class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-circle-check"></i></span>
+                    </div>
+                    <div id="statUnitSudah" class="text-2xl sm:text-3xl font-extrabold text-emerald-700">0</div>
+                    <p id="statPersenSudah" class="text-xs text-emerald-600 font-medium mt-1">0% dari total populasi</p>
+                </div>
+
+                <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-amber-200 bg-gradient-to-br from-white to-amber-50/40">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Unit Belum Maintenance</span>
+                        <span class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fa-solid fa-clock"></i></span>
+                    </div>
+                    <div id="statUnitBelum" class="text-2xl sm:text-3xl font-extrabold text-amber-600">0</div>
+                    <p class="text-xs text-amber-700 font-medium mt-1">Menunggu jadwal/tindakan</p>
+                </div>
+
+                <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Stok CPE Ready / Rusak</span>
+                        <span class="w-9 h-9 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center"><i class="fa-solid fa-wifi"></i></span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span id="statCpeReady" class="text-2xl sm:text-3xl font-extrabold text-slate-900">0</span>
+                        <span class="text-sm font-bold text-red-600">/ <span id="statCpeRusak">0</span> Rusak</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Otomatis update saat install/dismantle</p>
+                </div>
+            </div>
+
+            <!-- Charts Section (Diagram Batang & Diagram Line) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Diagram Batang -->
+                <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-slate-800 text-base mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-column text-amber-500"></i> Diagram Batang: Status Maintenance & Stok
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-4">Perbandingan Unit Sudah, Unit Belum, CPE Ready, dan CPE Rusak</p>
+                    <div class="h-64 w-full">
+                        <canvas id="barChartCanvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Diagram Line -->
+                <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-slate-800 text-base mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-blue-600"></i> Diagram Line: Tren Aktivitas Maintenance
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-4">Grafik aktivitas harian (Maintenance, Installasi, Dismantle, Troubleshoot)</p>
+                    <div class="h-64 w-full">
+                        <canvas id="lineChartCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daftar Ringkas Unit Sudah & Belum Maintenance -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Daftar Unit Belum Maintenance -->
+                <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-amber-700 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-hourglass-half"></i> Daftar Unit Belum Maintenance
+                        </h3>
+                        <span id="badgeBelumCount" class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">0 Unit</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-64">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-xs uppercase text-slate-500 bg-slate-50">
+                                    <th class="p-2.5">CN Unit</th>
+                                    <th class="p-2.5">Type</th>
+                                    <th class="p-2.5">IP Address</th>
+                                    <th class="p-2.5">Aksi Cepat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboardBelumList" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Daftar Unit Sudah Maintenance -->
+                <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-emerald-700 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-check-double"></i> Daftar Unit Sudah Maintenance
+                        </h3>
+                        <span id="badgeSudahCount" class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">0 Unit</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-64">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-xs uppercase text-slate-500 bg-slate-50">
+                                    <th class="p-2.5">CN Unit</th>
+                                    <th class="p-2.5">Serial Number</th>
+                                    <th class="p-2.5">IP Address</th>
+                                    <th class="p-2.5">PIC Terakhir</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboardSudahList" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 2. TAB POPULASI UNIT (CRUD, Edit, Delete All, Excel/GS)   -->
+        <!-- ========================================================= -->
+        <section id="tab-populasi" class="tab-content hidden space-y-5">
+            <!-- Form Input / Edit Populasi Unit -->
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100">
+                    <div>
+                        <h2 id="populasiFormTitle" class="text-lg font-extrabold text-slate-900">Form Input Populasi Unit</h2>
+                        <p class="text-xs text-slate-500">Data induk seluruh populasi alat tambang beserta perangkat CPE terpasang.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="field-btn cursor-pointer px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-import"></i> Import Excel
+                            <input type="file" accept=".xlsx,.xls,.csv" onchange="importExcel(event, 'populasi')" class="hidden">
+                        </label>
+                        <button onclick="importFromGoogleSheet('populasi')" class="field-btn px-3.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Import G-Sheet
+                        </button>
+                    </div>
+                </div>
+
+                <form id="populasiForm" onsubmit="savePopulasi(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    <input type="hidden" id="popId">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">CN Unit *</label>
+                        <input type="text" id="popCn" required placeholder="Contoh: DT-101" class="field-input w-full rounded-xl border border-slate-300 px-3.5 uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Type Unit *</label>
+                        <input type="text" id="popTypeUnit" required placeholder="Contoh: HD785-7 / PC2000" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Serial Number (CPE) *</label>
+                        <input type="text" id="popSn" required placeholder="SN Perangkat" class="field-input w-full rounded-xl border border-slate-300 px-3.5 uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Type CPE</label>
+                        <input type="text" id="popTypeCpe" placeholder="Contoh: Rajant / Cambium / Cisco" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">IP Address</label>
+                        <input type="text" id="popIp" placeholder="10.10.x.x" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">MSISDN / No. SIM</label>
+                        <input type="text" id="popMsisdn" placeholder="0812xxxx" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Status (Active / Inactive)</label>
+                        <select id="popStatus" class="field-input w-full rounded-xl border border-slate-300 px-3.5 bg-white">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Keterangan</label>
+                        <input type="text" id="popKet" placeholder="Catatan kondisi / lokasi" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+
+                    <div class="sm:col-span-2 lg:col-span-4 flex flex-wrap gap-3 pt-2">
+                        <button type="submit" id="popSubmitBtn" class="field-btn flex-1 sm:flex-none px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-plus-circle"></i> Simpan Populasi Unit
+                        </button>
+                        <button type="button" id="popCancelEditBtn" onclick="resetPopulasiForm()" class="hidden field-btn px-5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800">
+                            Batal Edit
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tabel Daftar Populasi Unit -->
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <h3 class="font-bold text-slate-900 text-base">Daftar Populasi Unit (<span id="popCount">0</span>)</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="exportSingleSheet('populasi', 'Populasi_Unit')" class="field-btn px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-excel"></i> Export Excel
+                        </button>
+                        <button onclick="confirmDeleteAll('populasi')" class="field-btn px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-trash-can"></i> Delete All Unit
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200">
+                                <th class="p-3">No</th>
+                                <th class="p-3">CN Unit</th>
+                                <th class="p-3">Type Unit</th>
+                                <th class="p-3">Serial Number</th>
+                                <th class="p-3">Type CPE</th>
+                                <th class="p-3">IP Address</th>
+                                <th class="p-3">MSISDN</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3">Keterangan</th>
+                                <th class="p-3 text-center">Menu Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="populasiTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 3. TAB DAFTAR UNIT (CN, Type, SN, IP, MSISDN, Status)     -->
+        <!-- ========================================================= -->
+        <section id="tab-unit" class="tab-content hidden space-y-5">
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-lg font-extrabold text-slate-900">Form Input & Daftar Unit</h2>
+                        <p class="text-xs text-slate-500">Input cepat unit operasional (CN Unit, Type Unit, SN, IP, MSISDN, Active/Inactive).</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="field-btn cursor-pointer px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-import"></i> Import Excel
+                            <input type="file" accept=".xlsx,.xls,.csv" onchange="importExcel(event, 'unit')" class="hidden">
+                        </label>
+                        <button onclick="importFromGoogleSheet('unit')" class="field-btn px-3.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Import G-Sheet
+                        </button>
+                    </div>
+                </div>
+
+                <form id="unitForm" onsubmit="saveUnit(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">CN Unit *</label>
+                        <input type="text" id="unitCn" required placeholder="Contoh: EX-204" class="field-input w-full rounded-xl border border-slate-300 px-3.5 uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Type Unit *</label>
+                        <input type="text" id="unitType" required placeholder="Contoh: PC1250" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Serial Number *</label>
+                        <input type="text" id="unitSn" required placeholder="Serial Number" class="field-input w-full rounded-xl border border-slate-300 px-3.5 uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">IP Address</label>
+                        <input type="text" id="unitIp" placeholder="10.10.x.x" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">MSISDN</label>
+                        <input type="text" id="unitMsisdn" placeholder="0812xxxx" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Status Unit</label>
+                        <select id="unitStatus" class="field-input w-full rounded-xl border border-slate-300 px-3.5 bg-white">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+
+                    <div class="sm:col-span-2 lg:col-span-3 pt-2">
+                        <button type="submit" class="field-btn w-full sm:w-auto px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Tambah ke Daftar Unit
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tabel Daftar Unit -->
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <h3 class="font-bold text-slate-900 text-base">Daftar Unit Terdaftar (<span id="unitCount">0</span>)</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="exportSingleSheet('unit', 'Daftar_Unit')" class="field-btn px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-excel"></i> Export Excel
+                        </button>
+                        <button onclick="confirmDeleteAll('unit')" class="field-btn px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-trash-can"></i> Delete All Unit
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200">
+                                <th class="p-3">No</th>
+                                <th class="p-3">CN Unit</th>
+                                <th class="p-3">Type Unit</th>
+                                <th class="p-3">Serial Number</th>
+                                <th class="p-3">IP Address</th>
+                                <th class="p-3">MSISDN</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-center">Hapus</th>
+                            </tr>
+                        </thead>
+                        <tbody id="unitTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 4. TAB STOK CPE READY                                     -->
+        <!-- ========================================================= -->
+        <section id="tab-cpeReady" class="tab-content hidden space-y-5">
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="mb-4 pb-3 border-b border-slate-100">
+                    <h2 class="text-lg font-extrabold text-slate-900">Input Stok CPE Ready</h2>
+                    <p class="text-xs text-slate-500">Stok otomatis berkurang saat dipilih pada <strong>Installasi</strong> dan otomatis bertambah saat <strong>Dismantle</strong>.</p>
+                </div>
+
+                <form id="cpeReadyForm" onsubmit="saveCpeReady(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Type CPE *</label>
+                        <input type="text" id="readyTypeCpe" required placeholder="Contoh: Rajant LX5 / Cambium" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Serial Number *</label>
+                        <input type="text" id="readySn" required placeholder="SN CPE Ready" class="field-input w-full rounded-xl border border-slate-300 px-3.5 uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Status</label>
+                        <select id="readyStatus" class="field-input w-full rounded-xl border border-slate-300 px-3.5 bg-white">
+                            <option value="Active">Active (Siap Pakai)</option>
+                            <option value="Inactive">Inactive (Standby)</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-3 pt-1">
+                        <button type="submit" class="field-btn w-full sm:w-auto px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-box-open"></i> Tambah Stok CPE Ready
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-slate-900 text-base">Daftar Stok CPE Ready (<span id="readyCount">0</span>)</h3>
+                    <button onclick="exportSingleSheet('cpeReady', 'Stok_CPE_Ready')" class="field-btn px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel"></i> Export Excel
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200">
+                                <th class="p-3">No</th>
+                                <th class="p-3">Type CPE</th>
+                                <th class="p-3">Serial Number</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cpeReadyTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 5. TAB RIWAYAT MAINTENANCE (Auto Stock & Auto CPE Rusak)  -->
+        <!-- ========================================================= -->
+        <section id="tab-maintenance" class="tab-content hidden space-y-5">
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="mb-4 pb-3 border-b border-slate-100">
+                    <h2 class="text-lg font-extrabold text-slate-900">Form Riwayat Maintenance Lapangan</h2>
+                    <p class="text-xs text-slate-500">Pilih CN Unit atau SN CPE Ready. Sistem otomatis memotong/menambah stok & mencatat CPE rusak.</p>
+                </div>
+
+                <form id="maintenanceForm" onsubmit="saveMaintenance(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    <!-- Pilih CN Unit dari Populasi -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">CN Unit (Pilih atau Ketik) *</label>
+                        <input list="cnUnitList" id="mntCnUnit" onchange="autoFillFromCn()" required placeholder="Pilih/Ketik CN Unit..." class="field-input w-full rounded-xl border border-slate-300 px-3.5 uppercase">
+                        <datalist id="cnUnitList"></datalist>
+                    </div>
+
+                    <!-- Activity Type -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Activity Type *</label>
+                        <select id="mntActivityType" onchange="handleActivityChange()" required class="field-input w-full rounded-xl border border-slate-300 px-3.5 bg-white font-semibold text-slate-900">
+                            <option value="Maintenance">Maintenance</option>
+                            <option value="Installasi">Installasi (Ambil dari CPE Ready)</option>
+                            <option value="Dismantle">Dismantle (Kembalikan ke Ready / Rusak)</option>
+                            <option value="Troubleshoot">Troubleshoot</option>
+                        </select>
+                    </div>
+
+                    <!-- Serial Number (Bisa pilih dari CPE Ready saat Installasi) -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Serial Number CPE * <span id="snHelperBadge" class="text-xs font-normal text-blue-600"></span>
+                        </label>
+                        <input list="cpeReadySnList" id="mntSn" required placeholder="SN CPE" class="field-input w-full rounded-xl border border-slate-300 px-3.5 uppercase">
+                        <datalist id="cpeReadySnList"></datalist>
+                    </div>
+
+                    <!-- IP Address -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">IP Address *</label>
+                        <input type="text" id="mntIp" required placeholder="10.10.x.x" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+
+                    <!-- Problem Type -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Problem Type *</label>
+                        <select id="mntProblemType" required class="field-input w-full rounded-xl border border-slate-300 px-3.5 bg-white">
+                            <option value="hardware">Hardware</option>
+                            <option value="preventive">Preventive</option>
+                            <option value="electrical">Electrical</option>
+                            <option value="software">Software</option>
+                            <option value="onhire">Onhire</option>
+                            <option value="offhire">Offhire</option>
+                        </select>
+                    </div>
+
+                    <!-- PIC Mekanik -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">PIC Mekanik *</label>
+                        <select id="mntPic" required class="field-input w-full rounded-xl border border-slate-300 px-3.5 bg-white font-semibold">
+                            <option value="A.Syawal">A.Syawal</option>
+                            <option value="Marianus">Marianus</option>
+                            <option value="Ikfhan">Ikfhan</option>
+                            <option value="Lutfy">Lutfy</option>
+                            <option value="Naive">Naive</option>
+                            <option value="Fathoni">Fathoni</option>
+                            <option value="Arifin">Arifin</option>
+                            <option value="DANU">DANU</option>
+                        </select>
+                    </div>
+
+                    <!-- Kondisi CPE (Untuk deteksi otomatis CPE Rusak) -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Kondisi Perangkat CPE *</label>
+                        <select id="mntCpeCondition" class="field-input w-full rounded-xl border border-slate-300 px-3.5 bg-white">
+                            <option value="Normal">Normal / Baik (Jika Dismantle -> Masuk Ready)</option>
+                            <option value="Rusak">CPE Rusak (Otomatis masuk daftar CPE Rusak)</option>
+                        </select>
+                    </div>
+
+                    <!-- Reason -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Reason (Penyebab) *</label>
+                        <input type="text" id="mntReason" required placeholder="Contoh: Konektor longgar / No ping / PM" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+
+                    <!-- Action -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Action (Tindakan) *</label>
+                        <input type="text" id="mntAction" required placeholder="Contoh: Ganti CPE / Re-crimping / Config" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+
+                    <div class="sm:col-span-2 lg:col-span-3 pt-2">
+                        <button type="submit" class="field-btn w-full sm:w-auto px-8 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold flex items-center justify-center gap-2 shadow-md">
+                            <i class="fa-solid fa-wrench"></i> Simpan Laporan Maintenance
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tabel Riwayat Maintenance -->
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-slate-900 text-base">Log Riwayat Maintenance (<span id="mntCount">0</span>)</h3>
+                    <button onclick="exportSingleSheet('maintenance', 'Riwayat_Maintenance')" class="field-btn px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel"></i> Export Excel
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200">
+                                <th class="p-3">Tanggal</th>
+                                <th class="p-3">CN Unit</th>
+                                <th class="p-3">Activity</th>
+                                <th class="p-3">Serial Number</th>
+                                <th class="p-3">IP Address</th>
+                                <th class="p-3">Problem</th>
+                                <th class="p-3">Reason</th>
+                                <th class="p-3">Action</th>
+                                <th class="p-3">Kondisi CPE</th>
+                                <th class="p-3">PIC</th>
+                            </tr>
+                        </thead>
+                        <tbody id="maintenanceTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 6. TAB CPE RUSAK (Otomatis Bertambah dari Maintenance)    -->
+        <!-- ========================================================= -->
+        <section id="tab-cpeRusak" class="tab-content hidden space-y-5">
+            <!-- Form Tambah Manual Jika Diperlukan -->
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-red-200">
+                <div class="mb-4 pb-3 border-b border-slate-100">
+                    <h2 class="text-lg font-extrabold text-red-700 flex items-center gap-2">
+                        <i class="fa-solid fa-microchip"></i> Daftar & Input CPE Rusak
+                    </h2>
+                    <p class="text-xs text-slate-500">Daftar ini <strong>otomatis bertambah</strong> apabila pada Form Maintenance dipilih kondisi "CPE Rusak", atau dapat diinput manual di bawah.</p>
+                </div>
+
+                <form id="cpeRusakForm" onsubmit="saveCpeRusakManual(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Type CPE *</label>
+                        <input type="text" id="rusakTypeCpe" required placeholder="Type CPE" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Serial Number *</label>
+                        <input type="text" id="rusakSn" required placeholder="SN Rusak" class="field-input w-full rounded-xl border border-slate-300 px-3.5 uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Asal CN Unit</label>
+                        <input type="text" id="rusakCn" placeholder="CN Unit" class="field-input w-full rounded-xl border border-slate-300 px-3.5 uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Keterangan Kerusakan *</label>
+                        <input type="text" id="rusakKet" required placeholder="Contoh: Mati total / Port LAN rusak" class="field-input w-full rounded-xl border border-slate-300 px-3.5">
+                    </div>
+                    <div class="sm:col-span-4 pt-1">
+                        <button type="submit" class="field-btn w-full sm:w-auto px-6 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Catat CPE Rusak Manual
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-slate-900 text-base">Daftar CPE Rusak (<span id="rusakCount">0</span>)</h3>
+                    <button onclick="exportSingleSheet('cpeRusak', 'Daftar_CPE_Rusak')" class="field-btn px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel"></i> Export Excel
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+                        <thead>
+                            <tr class="bg-red-50 text-red-800 text-xs uppercase border-b border-red-100">
+                                <th class="p-3">Tanggal</th>
+                                <th class="p-3">Type CPE</th>
+                                <th class="p-3">Serial Number</th>
+                                <th class="p-3">Asal CN Unit</th>
+                                <th class="p-3">Keterangan Kerusakan</th>
+                                <th class="p-3">PIC</th>
+                                <th class="p-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cpeRusakTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar Khusus Mobile (Tombol Besar Mudah Dipencet Mekanik) -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-40 grid grid-cols-6 py-1.5 px-1 shadow-2xl">
+        <button onclick="switchTab('dashboard')" data-tab="dashboard" class="mobile-nav-tab flex flex-col items-center justify-center py-1.5 rounded-xl text-amber-400">
+            <i class="fa-solid fa-chart-pie text-lg"></i>
+            <span class="text-[10px] font-bold mt-0.5">Dash</span>
+        </button>
+        <button onclick="switchTab('populasi')" data-tab="populasi" class="mobile-nav-tab flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-400">
+            <i class="fa-solid fa-truck-pickup text-lg"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Populasi</span>
+        </button>
+        <button onclick="switchTab('unit')" data-tab="unit" class="mobile-nav-tab flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-400">
+            <i class="fa-solid fa-list-check text-lg"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Unit</span>
+        </button>
+        <button onclick="switchTab('cpeReady')" data-tab="cpeReady" class="mobile-nav-tab flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-400">
+            <i class="fa-solid fa-router text-lg"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Ready</span>
+        </button>
+        <button onclick="switchTab('maintenance')" data-tab="maintenance" class="mobile-nav-tab flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-400">
+            <i class="fa-solid fa-screwdriver-wrench text-lg"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Maint.</span>
+        </button>
+        <button onclick="switchTab('cpeRusak')" data-tab="cpeRusak" class="mobile-nav-tab flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-400">
+            <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Rusak</span>
+        </button>
+    </nav>
+
+    <script>
+        /**
+         * =========================================================================
+         * STATE MANAGEMENT & LOCALSTORAGE PERSISTENCE
+         * =========================================================================
+         */
+        const STORAGE_KEY = 'mining_fleet_cpe_system_v1';
+        const GSHEET_CONFIG_KEY = 'mining_fleet_gsheet_config_v1';
+
+        let appState = {
+            populasi: [],     // { id, cnUnit, typeUnit, serialNumber, typeCpe, ipAddress, msisdn, status, keterangan }
+            unit: [],         // { id, cnUnit, typeUnit, serialNumber, ipAddress, msisdn, status }
+            cpeReady: [],     // { id, typeCpe, serialNumber, status }
+            maintenance: [],  // { id, date, cnUnit, activityType, serialNumber, ipAddress, problemType, reason, action, condition, pic }
+            cpeRusak: []      // { id, date, typeCpe, serialNumber, cnUnit, keterangan, pic }
+        };
+
+        let gsheetConfig = {
+            webhookUrl: '',
+            csvUrl: ''
+        };
+
+        let searchQuery = '';
+        let barChartInstance = null;
+        let lineChartInstance = null;
+
+        // Load data saat aplikasi dibuka
+        function loadFromStorage() {
+            try {
+                const savedData = localStorage.getItem(STORAGE_KEY);
+                if (savedData) {
+                    const parsed = JSON.parse(savedData);
+                    appState = { ...appState, ...parsed };
+                }
+                const savedConfig = localStorage.getItem(GSHEET_CONFIG_KEY);
+                if (savedConfig) {
+                    gsheetConfig = JSON.parse(savedConfig);
+                    document.getElementById('gsheetWebhookUrl').value = gsheetConfig.webhookUrl || '';
+                    document.getElementById('gsheetCsvUrl').value = gsheetConfig.csvUrl || '';
+                }
+            } catch (e) {
+                console.error("Gagal memuat localStorage:", e);
+            }
+            updateSyncIndicator();
+        }
+
+        // Simpan data ke localStorage & auto-sync ke Google Sheets jika dikonfigurasi
+        function saveToStorage(changedSheet = null) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+                renderAll();
+                if (changedSheet && gsheetConfig.webhookUrl) {
+                    autoPushToGoogleSheets(changedSheet, appState[changedSheet]);
+                }
+            } catch (e) {
+                showToast("Gagal menyimpan data ke penyimpanan lokal!", "error");
+            }
+        }
+
+        /**
+         * =========================================================================
+         * GOOGLE SHEETS AUTO-SAVE & IMPORT INTEGRATION
+         * =========================================================================
+         */
+        function saveGsheetSettings() {
+            gsheetConfig.webhookUrl = document.getElementById('gsheetWebhookUrl').value.trim();
+            gsheetConfig.csvUrl = document.getElementById('gsheetCsvUrl').value.trim();
+            localStorage.setItem(GSHEET_CONFIG_KEY, JSON.stringify(gsheetConfig));
+            updateSyncIndicator();
+            toggleModal('gsheetModal', false);
+            showToast("Pengaturan Google Sheets berhasil disimpan!", "success");
+        }
+
+        function updateSyncIndicator() {
+            const dot = document.getElementById('syncStatusDot');
+            const text = document.getElementById('syncStatusText');
+            if (gsheetConfig.webhookUrl) {
+                dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block";
+                text.textContent = "Auto-Sync Google Sheets Aktif";
+            } else {
+                dot.className = "w-2 h-2 rounded-full bg-amber-400 inline-block";
+                text.textContent = "Offline LocalStorage Aktif";
+            }
+        }
+
+        async function autoPushToGoogleSheets(sheetName, rows) {
+            if (!gsheetConfig.webhookUrl) return;
+            const text = document.getElementById('syncStatusText');
+            text.textContent = `Menyinkronkan ${sheetName}...`;
+            try {
+                await fetch(gsheetConfig.webhookUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sheet: sheetName, rows: rows })
+                });
+                text.textContent = "Tersimpan ke Google Sheets ✓";
+                setTimeout(updateSyncIndicator, 2500);
+            } catch (err) {
+                text.textContent = "Offline (Tersimpan Lokal)";
+            }
+        }
+
+        async function syncAllToGoogleSheets() {
+            if (!gsheetConfig.webhookUrl) {
+                showToast("Masukkan Web App URL Google Apps Script terlebih dahulu!", "error");
+                return;
+            }
+            showToast("Mengirim semua tabel ke Google Sheets...", "info");
+            for (const key of Object.keys(appState)) {
+                await autoPushToGoogleSheets(key, appState[key]);
+            }
+            showToast("Sinkronisasi ke Google Sheets selesai!", "success");
+        }
+
+        async function importFromGoogleSheet(targetTab) {
+            if (!gsheetConfig.csvUrl) {
+                toggleModal('gsheetModal', true);
+                showToast("Masukkan Link CSV Google Sheet terlebih dahulu!", "error");
+                return;
+            }
+            try {
+                showToast("Mengambil data dari Google Sheets...", "info");
+                const response = await fetch(gsheetConfig.csvUrl);
+                if (!response.ok) throw new Error("Gagal mengakses URL Google Sheet");
+                const csvText = await response.text();
+                const workbook = XLSX.read(csvText, { type: 'string' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                processImportedRows(jsonData, targetTab);
+            } catch (error) {
+                showToast("Gagal import Google Sheet. Pastikan sheet sudah dipublikasikan sebagai CSV.", "error");
+            }
+        }
+
+        function copyAppsScript() {
+            const textarea = document.getElementById('appsScriptCode');
+            textarea.select();
+            document.execCommand('copy');
+            showToast("Kode Google Apps Script disalin ke clipboard!", "success");
+        }
+
+        /**
+         * =========================================================================
+         * EXCEL IMPORT & EXPORT (SHEETJS)
+         * =========================================================================
+         */
+        function importExcel(event, targetTab) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    processImportedRows(jsonData, targetTab);
+                } catch (err) {
+                    showToast("Format file Excel tidak valid!", "error");
+                }
+                event.target.value = '';
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processImportedRows(rows, targetTab) {
+            if (!rows || rows.length === 0) {
+                showToast("File kosong atau tidak ada baris data!", "error");
+                return;
+            }
+
+            let addedCount = 0;
+            rows.forEach(row => {
+                // Normalisasi key kolom (case-insensitive)
+                const norm = {};
+                Object.keys(row).forEach(k => norm[k.toLowerCase().trim()] = String(row[k]).trim());
+
+                const cn = norm['cn unit'] || norm['cn'] || norm['cnunit'] || '';
+                const typeUnit = norm['type unit'] || norm['typeunit'] || norm['type'] || '';
+                const sn = norm['serial number'] || norm['sn'] || norm['serialnumber'] || '';
+                const typeCpe = norm['type cpe'] || norm['typecpe'] || '';
+                const ip = norm['ip address'] || norm['ip'] || norm['ipaddress'] || '';
+                const msisdn = norm['msisdn'] || '';
+                const statusRaw = norm['status'] || norm['active'] || 'Active';
+                const status = statusRaw.toLowerCase().includes('inact') ? 'Inactive' : 'Active';
+                const ket = norm['keterangan'] || norm['ket'] || '';
+
+                if (targetTab === 'populasi' && cn) {
+                    appState.populasi.push({
+                        id: generateId(),
+                        cnUnit: cn.toUpperCase(),
+                        typeUnit: typeUnit || '-',
+                        serialNumber: sn.toUpperCase() || '-',
+                        typeCpe: typeCpe || '-',
+                        ipAddress: ip || '-',
+                        msisdn: msisdn || '-',
+                        status: status,
+                        keterangan: ket
+                    });
+                    addedCount++;
+                } else if (targetTab === 'unit' && cn) {
+                    appState.unit.push({
+                        id: generateId(),
+                        cnUnit: cn.toUpperCase(),
+                        typeUnit: typeUnit || '-',
+                        serialNumber: sn.toUpperCase() || '-',
+                        ipAddress: ip || '-',
+                        msisdn: msisdn || '-',
+                        status: status
+                    });
+                    addedCount++;
+                }
+            });
+
+            saveToStorage(targetTab);
+            showToast(`Berhasil import ${addedCount} data ke ${targetTab.toUpperCase()}!`, "success");
+        }
+
+        function exportSingleSheet(stateKey, fileName) {
+            const data = appState[stateKey];
+            if (!data || data.length === 0) {
+                showToast("Tidak ada data untuk di-export!", "error");
+                return;
+            }
+            const cleanData = data.map(({ id, ...rest }) => rest);
+            const ws = XLSX.utils.json_to_sheet(cleanData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, fileName);
+            XLSX.writeFile(wb, `${fileName}_${new Date().toISOString().slice(0,10)}.xlsx`);
+            showToast(`Export ${fileName}.xlsx berhasil!`, "success");
+        }
+
+        function exportAllWorkbook() {
+            const wb = XLSX.utils.book_new();
+            const sheets = [
+                { key: 'populasi', name: 'Populasi_Unit' },
+                { key: 'unit', name: 'Daftar_Unit' },
+                { key: 'cpeReady', name: 'Stok_CPE_Ready' },
+                { key: 'maintenance', name: 'Riwayat_Maintenance' },
+                { key: 'cpeRusak', name: 'CPE_Rusak' }
+            ];
+
+            sheets.forEach(s => {
+                const clean = appState[s.key].map(({ id, ...rest }) => rest);
+                const ws = XLSX.utils.json_to_sheet(clean.length ? clean : [{ Info: 'Kosong' }]);
+                XLSX.utils.book_append_sheet(wb, ws, s.name);
+            });
+
+            XLSX.writeFile(wb, `Laporan_Inventaris_Mining_${new Date().toISOString().slice(0,10)}.xlsx`);
+            showToast("Seluruh database berhasil di-export ke Excel!", "success");
+        }
+
+        /**
+         * =========================================================================
+         * 1. POPULASI UNIT (CREATE, UPDATE, DELETE, DELETE ALL)
+         * =========================================================================
+         */
+        function savePopulasi(e) {
+            e.preventDefault();
+            const editId = document.getElementById('popId').value;
+            const payload = {
+                id: editId || generateId(),
+                cnUnit: document.getElementById('popCn').value.trim().toUpperCase(),
+                typeUnit: document.getElementById('popTypeUnit').value.trim(),
+                serialNumber: document.getElementById('popSn').value.trim().toUpperCase(),
+                typeCpe: document.getElementById('popTypeCpe').value.trim(),
+                ipAddress: document.getElementById('popIp').value.trim(),
+                msisdn: document.getElementById('popMsisdn').value.trim(),
+                status: document.getElementById('popStatus').value,
+                keterangan: document.getElementById('popKet').value.trim()
+            };
+
+            if (editId) {
+                const idx = appState.populasi.findIndex(item => item.id === editId);
+                if (idx !== -1) appState.populasi[idx] = payload;
+                showToast(`Data Populasi ${payload.cnUnit} berhasil diperbarui!`, "success");
+            } else {
+                appState.populasi.unshift(payload);
+                showToast(`Populasi Unit ${payload.cnUnit} ditambahkan!`, "success");
+            }
+
+            resetPopulasiForm();
+            saveToStorage('populasi');
+        }
+
+        function editPopulasi(id) {
+            const item = appState.populasi.find(p => p.id === id);
+            if (!item) return;
+
+            document.getElementById('popId').value = item.id;
+            document.getElementById('popCn').value = item.cnUnit;
+            document.getElementById('popTypeUnit').value = item.typeUnit;
+            document.getElementById('popSn').value = item.serialNumber;
+            document.getElementById('popTypeCpe').value = item.typeCpe;
+            document.getElementById('popIp').value = item.ipAddress;
+            document.getElementById('popMsisdn').value = item.msisdn;
+            document.getElementById('popStatus').value = item.status;
+            document.getElementById('popKet').value = item.keterangan;
+
+            document.getElementById('populasiFormTitle').textContent = `Edit Populasi Unit: ${item.cnUnit}`;
+            document.getElementById('popSubmitBtn').innerHTML = `<i class="fa-solid fa-check"></i> Update Populasi Unit`;
+            document.getElementById('popCancelEditBtn').classList.remove('hidden');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetPopulasiForm() {
+            document.getElementById('populasiForm').reset();
+            document.getElementById('popId').value = '';
+            document.getElementById('populasiFormTitle').textContent = 'Form Input Populasi Unit';
+            document.getElementById('popSubmitBtn').innerHTML = `<i class="fa-solid fa-plus-circle"></i> Simpan Populasi Unit`;
+            document.getElementById('popCancelEditBtn').classList.add('hidden');
+        }
+
+        function deleteItem(collectionKey, id) {
+            showConfirm("Hapus Data", "Yakin ingin menghapus baris data ini?", () => {
+                appState[collectionKey] = appState[collectionKey].filter(item => item.id !== id);
+                saveToStorage(collectionKey);
+                showToast("Data berhasil dihapus.", "info");
+            });
+        }
+
+        function confirmDeleteAll(collectionKey) {
+            const label = collectionKey === 'populasi' ? 'Populasi Unit' : 'Daftar Unit';
+            showConfirm(`Delete All ${label}`, `PERINGATAN: Semua data di ${label} akan dihapus permanen. Lanjutkan?`, () => {
+                appState[collectionKey] = [];
+                saveToStorage(collectionKey);
+                showToast(`Seluruh data ${label} berhasil dikosongkan!`, "info");
+            });
+        }
+
+        /**
+         * =========================================================================
+         * 2. DAFTAR UNIT
+         * =========================================================================
+         */
+        function saveUnit(e) {
+            e.preventDefault();
+            const newUnit = {
+                id: generateId(),
+                cnUnit: document.getElementById('unitCn').value.trim().toUpperCase(),
+                typeUnit: document.getElementById('unitType').value.trim(),
+                serialNumber: document.getElementById('unitSn').value.trim().toUpperCase(),
+                ipAddress: document.getElementById('unitIp').value.trim(),
+                msisdn: document.getElementById('unitMsisdn').value.trim(),
+                status: document.getElementById('unitStatus').value
+            };
+            appState.unit.unshift(newUnit);
+            document.getElementById('unitForm').reset();
+            saveToStorage('unit');
+            showToast(`Unit ${newUnit.cnUnit} berhasil ditambahkan!`, "success");
+        }
+
+        /**
+         * =========================================================================
+         * 3. STOK CPE READY
+         * =========================================================================
+         */
+        function saveCpeReady(e) {
+            e.preventDefault();
+            const sn = document.getElementById('readySn').value.trim().toUpperCase();
+            const exists = appState.cpeReady.some(c => c.serialNumber === sn);
+            if (exists) {
+                showToast(`Serial Number ${sn} sudah ada di Stok CPE Ready!`, "error");
+                return;
+            }
+
+            const newCpe = {
+                id: generateId(),
+                typeCpe: document.getElementById('readyTypeCpe').value.trim(),
+                serialNumber: sn,
+                status: document.getElementById('readyStatus').value
+            };
+            appState.cpeReady.unshift(newCpe);
+            document.getElementById('cpeReadyForm').reset();
+            saveToStorage('cpeReady');
+            showToast(`Stok CPE Ready (${sn}) ditambahkan!`, "success");
+        }
+
+        /**
+         * =========================================================================
+         * 4. RIWAYAT MAINTENANCE & LOGIKA OTOMATIS STOK CPE + CPE RUSAK
+         * =========================================================================
+         */
+        function autoFillFromCn() {
+            const cn = document.getElementById('mntCnUnit').value.trim().toUpperCase();
+            const popUnit = appState.populasi.find(p => p.cnUnit === cn) || appState.unit.find(u => u.cnUnit === cn);
+            if (popUnit) {
+                document.getElementById('mntIp').value = popUnit.ipAddress || '';
+                const actType = document.getElementById('mntActivityType').value;
+                if (actType !== 'Installasi') {
+                    document.getElementById('mntSn').value = popUnit.serialNumber || '';
+                }
+            }
+        }
+
+        function handleActivityChange() {
+            const actType = document.getElementById('mntActivityType').value;
+            const helper = document.getElementById('snHelperBadge');
+            const snInput = document.getElementById('mntSn');
+
+            if (actType === 'Installasi') {
+                helper.textContent = "(Pilih SN dari Stok CPE Ready)";
+                snInput.value = '';
+                snInput.placeholder = "Pilih SN dari CPE Ready...";
+            } else if (actType === 'Dismantle') {
+                helper.textContent = "(Otomatis masuk Ready jika Normal)";
+                autoFillFromCn();
+            } else {
+                helper.textContent = "";
+                autoFillFromCn();
+            }
+        }
+
+        function saveMaintenance(e) {
+            e.preventDefault();
+            const cnUnit = document.getElementById('mntCnUnit').value.trim().toUpperCase();
+            const activityType = document.getElementById('mntActivityType').value;
+            const sn = document.getElementById('mntSn').value.trim().toUpperCase();
+            const ipAddress = document.getElementById('mntIp').value.trim();
+            const problemType = document.getElementById('mntProblemType').value;
+            const pic = document.getElementById('mntPic').value;
+            const condition = document.getElementById('mntCpeCondition').value;
+            const reason = document.getElementById('mntReason').value.trim();
+            const action = document.getElementById('mntAction').value.trim();
+            const today = new Date().toISOString().slice(0, 10);
+
+            let detectedTypeCpe = 'CPE Unit';
+            const popMatch = appState.populasi.find(p => p.cnUnit === cnUnit || p.serialNumber === sn);
+            if (popMatch && popMatch.typeCpe) detectedTypeCpe = popMatch.typeCpe;
+
+            // LOGIKA 1: INSTALLASI -> Mengurangi Stok CPE Ready secara otomatis
+            if (activityType === 'Installasi') {
+                const readyIndex = appState.cpeReady.findIndex(c => c.serialNumber === sn);
+                if (readyIndex !== -1) {
+                    detectedTypeCpe = appState.cpeReady[readyIndex].typeCpe;
+                    appState.cpeReady.splice(readyIndex, 1); // Kurangi stok ready
+                    showToast(`Stok CPE Ready (${sn}) otomatis berkurang karena Installasi!`, "info");
+                }
+                // Update SN & IP pada Populasi Unit jika unit ditemukan
+                if (popMatch) {
+                    popMatch.serialNumber = sn;
+                    popMatch.typeCpe = detectedTypeCpe;
+                    popMatch.ipAddress = ipAddress;
+                    popMatch.status = 'Active';
+                }
+            }
+
+            // LOGIKA 2: DISMANTLE -> Menambah Stok CPE Ready (jika kondisi Normal)
+            if (activityType === 'Dismantle') {
+                if (condition === 'Normal') {
+                    const alreadyReady = appState.cpeReady.some(c => c.serialNumber === sn);
+                    if (!alreadyReady && sn && sn !== '-') {
+                        appState.cpeReady.unshift({
+                            id: generateId(),
+                            typeCpe: detectedTypeCpe,
+                            serialNumber: sn,
+                            status: 'Active'
+                        });
+                        showToast(`CPE (${sn}) hasil Dismantle otomatis masuk ke Stok CPE Ready!`, "success");
+                    }
+                }
+                if (popMatch) {
+                    popMatch.serialNumber = '-';
+                    popMatch.status = 'Inactive';
+                }
+            }
+
+            // LOGIKA 3: CPE RUSAK -> Otomatis bertambah ke daftar CPE Rusak jika kondisi = Rusak
+            if (condition === 'Rusak') {
+                // Pastikan jika SN sempat ada di ready, dihapus
+                appState.cpeReady = appState.cpeReady.filter(c => c.serialNumber !== sn);
+
+                appState.cpeRusak.unshift({
+                    id: generateId(),
+                    date: today,
+                    typeCpe: detectedTypeCpe,
+                    serialNumber: sn,
+                    cnUnit: cnUnit,
+                    keterangan: `${reason} (${action})`,
+                    pic: pic
+                });
+                showToast(`CPE Rusak (${sn}) otomatis tercatat di Form CPE Rusak!`, "error");
+            }
+
+            // Simpan ke Riwayat Maintenance
+            const record = {
+                id: generateId(),
+                date: today,
+                cnUnit,
+                activityType,
+                serialNumber: sn,
+                ipAddress,
+                problemType,
+                reason,
+                action,
+                condition,
+                pic
+            };
+
+            appState.maintenance.unshift(record);
+            document.getElementById('maintenanceForm').reset();
+            handleActivityChange();
+
+            // Simpan & Sync semua tabel yang terpengaruh
+            saveToStorage('maintenance');
+            if (gsheetConfig.webhookUrl) {
+                autoPushToGoogleSheets('cpeReady', appState.cpeReady);
+                autoPushToGoogleSheets('cpeRusak', appState.cpeRusak);
+                autoPushToGoogleSheets('populasi', appState.populasi);
+            }
+            showToast(`Riwayat Maintenance ${cnUnit} berhasil disimpan!`, "success");
+        }
+
+        function saveCpeRusakManual(e) {
+            e.preventDefault();
+            const item = {
+                id: generateId(),
+                date: new Date().toISOString().slice(0, 10),
+                typeCpe: document.getElementById('rusakTypeCpe').value.trim(),
+                serialNumber: document.getElementById('rusakSn').value.trim().toUpperCase(),
+                cnUnit: document.getElementById('rusakCn').value.trim().toUpperCase() || '-',
+                keterangan: document.getElementById('rusakKet').value.trim(),
+                pic: 'Manual Input'
+            };
+            appState.cpeRusak.unshift(item);
+            document.getElementById('cpeRusakForm').reset();
+            saveToStorage('cpeRusak');
+            showToast(`CPE Rusak (${item.serialNumber}) ditambahkan!`, "success");
+        }
+
+        function quickMaintenanceFromDash(cnUnit) {
+            switchTab('maintenance');
+            document.getElementById('mntCnUnit').value = cnUnit;
+            autoFillFromCn();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        /**
+         * =========================================================================
+         * GLOBAL SEARCH & RENDERING TABLES + DASHBOARD CHARTS
+         * =========================================================================
+         */
+        function handleGlobalSearch() {
+            searchQuery = document.getElementById('globalSearchInput').value.trim().toLowerCase();
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (searchQuery) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+            renderAll();
+        }
+
+        function clearGlobalSearch() {
+            document.getElementById('globalSearchInput').value = '';
+            searchQuery = '';
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            renderAll();
+        }
+
+        function matchesSearch(obj) {
+            if (!searchQuery) return true;
+            const cn = (obj.cnUnit || '').toLowerCase();
+            const ip = (obj.ipAddress || '').toLowerCase();
+            const sn = (obj.serialNumber || '').toLowerCase();
+            return cn.includes(searchQuery) || ip.includes(searchQuery) || sn.includes(searchQuery);
+        }
+
+        function renderAll() {
+            renderDatalists();
+            renderPopulasiTable();
+            renderUnitTable();
+            renderCpeReadyTable();
+            renderMaintenanceTable();
+            renderCpeRusakTable();
+            renderDashboard();
+        }
+
+        function renderDatalists() {
+            const cnList = document.getElementById('cnUnitList');
+            const allCns = new Set([
+                ...appState.populasi.map(p => p.cnUnit),
+                ...appState.unit.map(u => u.cnUnit)
+            ]);
+            cnList.innerHTML = Array.from(allCns).map(cn => `<option value="${cn}">`).join('');
+
+            const snList = document.getElementById('cpeReadySnList');
+            snList.innerHTML = appState.cpeReady.map(c => `<option value="${c.serialNumber}">${c.typeCpe} (${c.status})</option>`).join('');
+        }
+
+        function renderPopulasiTable() {
+            const filtered = appState.populasi.filter(matchesSearch);
+            document.getElementById('popCount').textContent = filtered.length;
+            const tbody = document.getElementById('populasiTableBody');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-400">Belum ada data populasi unit yang sesuai.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((item, idx) => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-3 text-slate-500">${idx + 1}</td>
+                    <td class="p-3 font-bold text-slate-900">${item.cnUnit}</td>
+                    <td class="p-3">${item.typeUnit}</td>
+                    <td class="p-3 font-mono text-xs">${item.serialNumber}</td>
+                    <td class="p-3">${item.typeCpe || '-'}</td>
+                    <td class="p-3 font-mono text-xs text-blue-700">${item.ipAddress || '-'}</td>
+                    <td class="p-3 font-mono text-xs">${item.msisdn || '-'}</td>
+                    <td class="p-3">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${item.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}">
+                            ${item.status}
+                        </span>
+                    </td>
+                    <td class="p-3 text-slate-600 max-w-xs truncate">${item.keterangan || '-'}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="editPopulasi('${item.id}')" class="px-3 py-2 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold" title="Edit">
+                                <i class="fa-solid fa-pen-to-square"></i> Edit
+                            </button>
+                            <button onclick="deleteItem('populasi', '${item.id}')" class="px-3 py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold" title="Hapus">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderUnitTable() {
+            const filtered = appState.unit.filter(matchesSearch);
+            document.getElementById('unitCount').textContent = filtered.length;
+            const tbody = document.getElementById('unitTableBody');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">Belum ada data daftar unit.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((item, idx) => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-3 text-slate-500">${idx + 1}</td>
+                    <td class="p-3 font-bold text-slate-900">${item.cnUnit}</td>
+                    <td class="p-3">${item.typeUnit}</td>
+                    <td class="p-3 font-mono text-xs">${item.serialNumber}</td>
+                    <td class="p-3 font-mono text-xs text-blue-700">${item.ipAddress || '-'}</td>
+                    <td class="p-3 font-mono text-xs">${item.msisdn || '-'}</td>
+                    <td class="p-3">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${item.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}">
+                            ${item.status}
+                        </span>
+                    </td>
+                    <td class="p-3 text-center">
+                        <button onclick="deleteItem('unit', '${item.id}')" class="px-3 py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderCpeReadyTable() {
+            const filtered = appState.cpeReady.filter(matchesSearch);
+            document.getElementById('readyCount').textContent = filtered.length;
+            const tbody = document.getElementById('cpeReadyTableBody');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Stok CPE Ready kosong.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((item, idx) => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-3 text-slate-500">${idx + 1}</td>
+                    <td class="p-3 font-bold text-slate-900">${item.typeCpe}</td>
+                    <td class="p-3 font-mono text-xs font-semibold text-emerald-700">${item.serialNumber}</td>
+                    <td class="p-3">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${item.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
+                            ${item.status}
+                        </span>
+                    </td>
+                    <td class="p-3 text-center">
+                        <button onclick="deleteItem('cpeReady', '${item.id}')" class="px-3 py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderMaintenanceTable() {
+            const filtered = appState.maintenance.filter(matchesSearch);
+            document.getElementById('mntCount').textContent = filtered.length;
+            const tbody = document.getElementById('maintenanceTableBody');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-400">Belum ada riwayat maintenance.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(item => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-3 text-xs text-slate-500">${item.date}</td>
+                    <td class="p-3 font-bold text-slate-900">${item.cnUnit}</td>
+                    <td class="p-3">
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-800">${item.activityType}</span>
+                    </td>
+                    <td class="p-3 font-mono text-xs">${item.serialNumber}</td>
+                    <td class="p-3 font-mono text-xs">${item.ipAddress}</td>
+                    <td class="p-3 capitalize text-xs font-semibold">${item.problemType}</td>
+                    <td class="p-3 text-xs">${item.reason}</td>
+                    <td class="p-3 text-xs">${item.action}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-0.5 rounded text-xs font-bold ${item.condition === 'Rusak' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">
+                            ${item.condition}
+                        </span>
+                    </td>
+                    <td class="p-3 font-bold text-slate-800 text-xs">${item.pic}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderCpeRusakTable() {
+            const filtered = appState.cpeRusak.filter(matchesSearch);
+            document.getElementById('rusakCount').textContent = filtered.length;
+            const tbody = document.getElementById('cpeRusakTableBody');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Tidak ada catatan CPE rusak.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(item => `
+                <tr class="hover:bg-red-50/30">
+                    <td class="p-3 text-xs text-slate-500">${item.date}</td>
+                    <td class="p-3 font-bold text-slate-900">${item.typeCpe}</td>
+                    <td class="p-3 font-mono text-xs font-bold text-red-700">${item.serialNumber}</td>
+                    <td class="p-3 font-semibold">${item.cnUnit}</td>
+                    <td class="p-3 text-xs text-slate-700">${item.keterangan}</td>
+                    <td class="p-3 text-xs font-semibold">${item.pic}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="deleteItem('cpeRusak', '${item.id}')" class="px-3 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        /**
+         * =========================================================================
+         * 5. DASHBOARD ANALITIK (UNIT SUDAH VS BELUM + BAR & LINE CHARTS)
+         * =========================================================================
+         */
+        function renderDashboard() {
+            // Gabungkan seluruh unit unik dari Populasi Unit (dan Daftar Unit jika belum ada di Populasi)
+            const unitMap = new Map();
+            appState.populasi.forEach(p => unitMap.set(p.cnUnit, p));
+            appState.unit.forEach(u => {
+                if (!unitMap.has(u.cnUnit)) unitMap.set(u.cnUnit, u);
+            });
+
+            const allUnits = Array.from(unitMap.values());
+            const maintainedCnSet = new Set(appState.maintenance.map(m => m.cnUnit));
+
+            const unitSudahList = allUnits.filter(u => maintainedCnSet.has(u.cnUnit));
+            const unitBelumList = allUnits.filter(u => !maintainedCnSet.has(u.cnUnit));
+
+            const total = allUnits.length;
+            const sudahCount = unitSudahList.length;
+            const belumCount = unitBelumList.length;
+            const persenSudah = total > 0 ? Math.round((sudahCount / total) * 100) : 0;
+
+            // Update KPI Cards
+            document.getElementById('statTotalUnit').textContent = total;
+            document.getElementById('statUnitSudah').textContent = sudahCount;
+            document.getElementById('statPersenSudah').textContent = `${persenSudah}% dari total populasi`;
+            document.getElementById('statUnitBelum').textContent = belumCount;
+            document.getElementById('statCpeReady').textContent = appState.cpeReady.length;
+            document.getElementById('statCpeRusak').textContent = appState.cpeRusak.length;
+
+            document.getElementById('badgeBelumCount').textContent = `${belumCount} Unit`;
+            document.getElementById('badgeSudahCount').textContent = `${sudahCount} Unit`;
+
+            // Render Tabel Ringkas Belum Maintenance
+            const belumTbody = document.getElementById('dashboardBelumList');
+            belumTbody.innerHTML = unitBelumList.length === 0
+                ? `<tr><td colspan="4" class="p-4 text-center text-slate-400 text-xs">Semua unit sudah di-maintenance!</td></tr>`
+                : unitBelumList.map(u => `
+                    <tr>
+                        <td class="p-2.5 font-bold text-slate-900">${u.cnUnit}</td>
+                        <td class="p-2.5 text-xs">${u.typeUnit}</td>
+                        <td class="p-2.5 font-mono text-xs">${u.ipAddress || '-'}</td>
+                        <td class="p-2.5">
+                            <button onclick="quickMaintenanceFromDash('${u.cnUnit}')" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold">
+                                <i class="fa-solid fa-wrench mr-1"></i>Kerjakan
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+            // Render Tabel Ringkas Sudah Maintenance
+            const sudahTbody = document.getElementById('dashboardSudahList');
+            sudahTbody.innerHTML = unitSudahList.length === 0
+                ? `<tr><td colspan="4" class="p-4 text-center text-slate-400 text-xs">Belum ada unit yang selesai maintenance.</td></tr>`
+                : unitSudahList.map(u => {
+                    const lastLog = appState.maintenance.find(m => m.cnUnit === u.cnUnit);
+                    return `
+                        <tr>
+                            <td class="p-2.5 font-bold text-emerald-700">${u.cnUnit}</td>
+                            <td class="p-2.5 font-mono text-xs">${u.serialNumber}</td>
+                            <td class="p-2.5 font-mono text-xs">${u.ipAddress || '-'}</td>
+                            <td class="p-2.5 text-xs font-semibold">${lastLog ? lastLog.pic : '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            updateCharts(sudahCount, belumCount, appState.cpeReady.length, appState.cpeRusak.length);
+        }
+
+        function updateCharts(sudahCount, belumCount, readyCount, rusakCount) {
+            // 1. Diagram Batang
+            const barCtx = document.getElementById('barChartCanvas').getContext('2d');
+            if (barChartInstance) barChartInstance.destroy();
+
+            barChartInstance = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Unit Sudah', 'Unit Belum', 'CPE Ready', 'CPE Rusak'],
+                    datasets: [{
+                        label: 'Jumlah Perangkat / Unit',
+                        data: [sudahCount, belumCount, readyCount, rusakCount],
+                        backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#ef4444'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } }
+                    }
+                }
+            });
+
+            // 2. Diagram Line (Tren Harian Riwayat Maintenance)
+            const dateCounts = {};
+            appState.maintenance.forEach(m => {
+                dateCounts[m.date] = (dateCounts[m.date] || 0) + 1;
+            });
+            const sortedDates = Object.keys(dateCounts).sort();
+            const lineLabels = sortedDates.length > 0 ? sortedDates : [new Date().toISOString().slice(0, 10)];
+            const lineValues = sortedDates.length > 0 ? sortedDates.map(d => dateCounts[d]) : [0];
+
+            const lineCtx = document.getElementById('lineChartCanvas').getContext('2d');
+            if (lineChartInstance) lineChartInstance.destroy();
+
+            lineChartInstance = new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: lineLabels,
+                    datasets: [{
+                        label: 'Aktivitas Maintenance / Hari',
+                        data: lineValues,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                        borderWidth: 3,
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#2563eb'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } }
+                    }
+                }
+            });
+        }
+
+        /**
+         * =========================================================================
+         * UI HELPERS (TABS, TOASTS, MODALS, DEMO DATA)
+         * =========================================================================
+         */
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+            // Desktop tabs active state
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                if (btn.dataset.tab === tabName) {
+                    btn.className = "nav-tab px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 bg-amber-500 text-slate-950";
+                } else {
+                    btn.className = "nav-tab px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-slate-300 hover:bg-slate-800";
+                }
+            });
+
+            // Mobile bottom nav active state
+            document.querySelectorAll('.mobile-nav-tab').forEach(btn => {
+                if (btn.dataset.tab === tabName) {
+                    btn.classList.remove('text-slate-400');
+                    btn.classList.add('text-amber-400', 'bg-slate-800');
+                } else {
+                    btn.classList.add('text-slate-400');
+                    btn.classList.remove('text-amber-400', 'bg-slate-800');
+                }
+            });
+
+            if (tabName === 'dashboard') renderDashboard();
+        }
+
+        function toggleModal(modalId, show) {
+            const modal = document.getElementById(modalId);
+            if (show) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const colors = {
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-red-600 text-white',
+                info: 'bg-slate-900 text-white'
+            };
+            const icons = {
+                success: 'fa-circle-check',
+                error: 'fa-circle-exclamation',
+                info: 'fa-circle-info'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `${colors[type] || colors.info} px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm font-semibold pointer-events-auto transition-all duration-300`;
+            toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info} text-base"></i><span>${message}</span>`;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        function showConfirm(title, message, onConfirm) {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmMessage').textContent = message;
+            toggleModal('confirmModal', true);
+
+            const okBtn = document.getElementById('confirmOkBtn');
+            const cancelBtn = document.getElementById('confirmCancelBtn');
+
+            const cleanup = () => {
+                toggleModal('confirmModal', false);
+                okBtn.onclick = null;
+                cancelBtn.onclick = null;
+            };
+
+            okBtn.onclick = () => {
+                cleanup();
+                onConfirm();
+            };
+            cancelBtn.onclick = cleanup;
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
+        }
+
+        function seedDemoData() {
+            showConfirm("Isi Data Contoh", "Menambahkan contoh populasi unit, stok CPE ready, dan riwayat maintenance untuk simulasi?", () => {
+                const today = new Date().toISOString().slice(0, 10);
+                appState.populasi = [
+                    { id: generateId(), cnUnit: 'DT-78501', typeUnit: 'HD785-7', serialNumber: 'SN-RJ-9001', typeCpe: 'Rajant LX5', ipAddress: '10.20.1.101', msisdn: '081255001101', status: 'Active', keterangan: 'Pit Utara' },
+                    { id: generateId(), cnUnit: 'DT-78502', typeUnit: 'HD785-7', serialNumber: 'SN-RJ-9002', typeCpe: 'Rajant LX5', ipAddress: '10.20.1.102', msisdn: '081255001102', status: 'Active', keterangan: 'Pit Selatan' },
+                    { id: generateId(), cnUnit: 'EX-2001', typeUnit: 'PC2000-8', serialNumber: 'SN-CB-4401', typeCpe: 'Cambium', ipAddress: '10.20.2.10', msisdn: '081255002210', status: 'Active', keterangan: 'Loading Point A' },
+                    { id: generateId(), cnUnit: 'DZ-37505', typeUnit: 'D375A-6', serialNumber: 'SN-RJ-9005', typeCpe: 'Rajant ES1', ipAddress: '10.20.3.15', msisdn: '081255003315', status: 'Inactive', keterangan: 'Standby Workshop' }
+                ];
+                appState.cpeReady = [
+                    { id: generateId(), typeCpe: 'Rajant LX5', serialNumber: 'SN-RDY-1001', status: 'Active' },
+                    { id: generateId(), typeCpe: 'Rajant ES1', serialNumber: 'SN-RDY-1002', status: 'Active' },
+                    { id: generateId(), typeCpe: 'Cambium', serialNumber: 'SN-RDY-1003', status: 'Active' }
+                ];
+                appState.maintenance = [
+                    { id: generateId(), date: today, cnUnit: 'DT-78501', activityType: 'Maintenance', serialNumber: 'SN-RJ-9001', ipAddress: '10.20.1.101', problemType: 'preventive', reason: 'PM Rutin 500 HM', action: 'Cleaning antena & cek RSSI', condition: 'Normal', pic: 'A.Syawal' }
+                ];
+                saveToStorage('populasi');
+                showToast("Data contoh berhasil dimuat!", "success");
+            });
+        }
+
+        // Inisialisasi saat halaman dimuat
+        window.onload = function() {
+            loadFromStorage();
+            renderAll();
+        };
+    </script>
+</body>
+</html>
