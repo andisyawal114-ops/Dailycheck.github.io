@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MineNet Ops — Site Kalimantan - Site KPCS</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- SheetJS (xlsx) untuk Import & Template Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        slate: {
+                            850: '#151e2e',
+                            900: '#0f172a',
+                            950: '#090d16',
+                        },
+                        amber: {
+                            450: '#f59e0b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        html {
+            font-size: 13px;
+        }
+        /* Custom Scrollbar untuk nuansa industri gelap */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f59e0b;
+        }
+
+        /* Animasi Pulse Radar untuk Peta Topologi */
+        @keyframes radarPing {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            70% { transform: scale(2.2); opacity: 0; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+        .radar-ping {
+            animation: radarPing 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        /* Grid Pattern Background untuk Peta Topologi */
+        .topo-grid {
+            background-size: 32px 32px;
+            background-image: 
+                linear-gradient(to right, rgba(51, 65, 85, 0.25) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(51, 65, 85, 0.25) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 font-sans antialiased selection:bg-amber-500 selection:text-slate-950 overflow-x-hidden">
+
+    <!-- Container Utama Aplikasi -->
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- Overlay Mobile Sidebar -->
+        <div id="mobileOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-30 hidden lg:hidden"></div>
+
+        <!-- SIDEBAR NAVIGASI -->
+        <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-40 w-60 bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 -translate-x-full lg:translate-x-0">
+            <!-- Brand Header -->
+            <div class="p-3.5 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 shadow-lg shadow-amber-500/20">
+                        <i class="fa-solid fa-satellite-dish text-sm"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-extrabold text-base tracking-tight text-white flex items-center gap-1">
+                            MineNet <span class="text-amber-400">Ops</span>
+                        </h1>
+                        <p class="text-[10px] text-slate-400 font-medium tracking-wide uppercase">Site Network & IT Asset</p>
+                    </div>
+                </div>
+                <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 hover:text-white p-1.5 rounded-lg">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <!-- Info Shift / Status Site -->
+            <div class="px-3 py-2 mx-3 mt-3 rounded-lg bg-slate-850 border border-slate-800/80 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <div>
+                        <p class="text-[11px] font-semibold text-slate-200 leading-tight">SITE KALIMANTAN - SITE KPCS</p>
+                        <p class="text-[9px] text-slate-400">Mesh Network: 99.4% Uptime</p>
+                    </div>
+                </div>
+                <span class="text-[9px] font-mono bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/30">SHIFT 1</span>
+            </div>
+
+            <!-- Menu Navigasi -->
+            <nav class="flex-1 px-3 py-3.5 space-y-1 overflow-y-auto">
+                <p class="px-2.5 text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Menu Operasional</p>
+                
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all bg-amber-500 text-slate-950 font-semibold shadow-md shadow-amber-500/15">
+                    <i class="fa-solid fa-gauge-high w-4 text-center"></i>
+                    <span>Dashboard Utama</span>
+                </button>
+
+                <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/70 transition-all">
+                    <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-server w-4 text-center"></i>
+                        <span>Inventori Perangkat</span>
+                    </div>
+                    <span id="badge-inventory" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">0</span>
+                </button>
+
+                <button onclick="switchTab('maintenance')" id="nav-maintenance" class="nav-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/70 transition-all">
+                    <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-screwdriver-wrench w-4 text-center"></i>
+                        <span>Maintenance & Inspeksi</span>
+                    </div>
+                    <span id="badge-maintenance" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-400">0</span>
+                </button>
+
+                <button onclick="switchTab('spareparts')" id="nav-spareparts" class="nav-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/70 transition-all">
+                    <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-boxes-stacked w-4 text-center"></i>
+                        <span>Stok Suku Cadang</span>
+                    </div>
+                    <span id="badge-critical" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-400 hidden">0</span>
+                </button>
+
+                <button onclick="switchTab('topology')" id="nav-topology" class="nav-btn w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/70 transition-all">
+                    <i class="fa-solid fa-diagram-project w-4 text-center"></i>
+                    <span>Peta Topologi & Lokasi</span>
+                </button>
+            </nav>
+
+            <!-- Footer Sidebar: Reset Data & Info Teknisi -->
+            <div class="p-3 border-t border-slate-800 space-y-2.5">
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button onclick="exportInventoryCSV()" class="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold border border-slate-700 transition">
+                        <i class="fa-solid fa-file-csv text-emerald-400 text-xs"></i>
+                        <span>Ekspor CSV</span>
+                    </button>
+                    <button onclick="confirmDeleteAll('all')" class="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[11px] font-semibold border border-rose-500/30 transition">
+                        <i class="fa-solid fa-trash-can text-[11px]"></i>
+                        <span>Hapus Semua</span>
+                    </button>
+                </div>
+                <div class="flex items-center justify-between pt-0.5">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 font-bold text-[11px]">
+                            IT
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-semibold text-white">Teknisi Jaringan</p>
+                            <p class="text-[9px] text-slate-400">NetOps Field Engineer</p>
+                        </div>
+                    </div>
+                    <button onclick="resetDemoData()" title="Reset Data Demo" class="text-slate-500 hover:text-amber-400 p-1.5 rounded-lg transition text-xs">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- KONTEN UTAMA -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            
+            <!-- Top Header Bar -->
+            <header class="h-13 py-2 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-3 lg:px-5 flex items-center justify-between shrink-0 z-20">
+                <div class="flex items-center gap-2.5">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white">
+                        <i class="fa-solid fa-bars text-xs"></i>
+                    </button>
+                    <div>
+                        <h2 id="pageTitle" class="text-sm sm:text-base font-bold text-white leading-tight">Dashboard Operasional</h2>
+                        <p id="pageSubtitle" class="text-[11px] text-slate-400 hidden sm:block">Pemantauan real-time kesehatan jaringan unit tambang & repeater lapangan</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <div class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-850 border border-slate-800 text-[11px] text-slate-400 font-mono">
+                        <i class="fa-regular fa-clock text-amber-400"></i>
+                        <span id="liveClock">--:--:-- WITA</span>
+                    </div>
+                    <button onclick="openModal('modalAddDevice')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-lg shadow-amber-500/20 transition cursor-pointer">
+                        <i class="fa-solid fa-plus"></i>
+                        <span class="hidden sm:inline">Tambah Perangkat</span>
+                        <span class="sm:hidden">Aset</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Scrollable Main Area -->
+            <main class="flex-1 overflow-y-auto p-3 lg:p-5 space-y-4">
+
+                <!-- ==================== TAB 1: DASHBOARD ==================== -->
+                <section id="tab-dashboard" class="tab-content space-y-4">
+                    
+                    <!-- Banner Sapaan -->
+                    <div class="rounded-xl bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-800 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 relative overflow-hidden">
+                        <div class="absolute right-0 top-0 h-full w-40 bg-amber-500/5 blur-2xl pointer-events-none"></div>
+                        <div>
+                            <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-semibold mb-1.5">
+                                <i class="fa-solid fa-shield-halved"></i>
+                                <span>Sistem Fleet Management & Telemetry Aktif</span>
+                            </div>
+                            <h3 class="text-base font-bold text-white">Selamat bertugas, Tim Network Field!</h3>
+                            <p class="text-xs text-slate-400 mt-0.5 max-w-2xl">
+                                Pantau kesiapan perangkat radio komunikasi unit berat (HD785, PC2000), stabilitas repeater solar cell, jadwal inspeksi preventif, dan ketersediaan suku cadang kritis.
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 shrink-0">
+                            <button onclick="openModal('modalAddMaintenance')" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-white transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-calendar-plus text-amber-400"></i>
+                                Buat Jadwal Maintenance
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 4 Kartu KPI -->
+                    <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                        <!-- KPI 1 -->
+                        <div onclick="switchTab('inventory')" class="cursor-pointer rounded-xl bg-slate-900 border border-slate-800 hover:border-emerald-500/50 p-3.5 transition group">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Total Aset Aktif</span>
+                                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition text-xs">
+                                    <i class="fa-solid fa-wifi"></i>
+                                </div>
+                            </div>
+                            <div class="mt-2 flex items-baseline gap-1.5">
+                                <h4 id="kpi-active-assets" class="text-2xl font-extrabold text-white font-mono">0</h4>
+                                <span id="kpi-total-assets" class="text-[11px] text-slate-400">/ 0 Total Unit</span>
+                            </div>
+                            <p class="text-[11px] text-emerald-400 mt-1.5 flex items-center gap-1">
+                                <i class="fa-solid fa-circle-check"></i> Online di Pit, Repeater & Kantor
+                            </p>
+                        </div>
+
+                        <!-- KPI 2 -->
+                        <div onclick="switchTab('maintenance')" class="cursor-pointer rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/50 p-3.5 transition group">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Jadwal Maintenance</span>
+                                <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-110 transition text-xs">
+                                    <i class="fa-solid fa-clipboard-check"></i>
+                                </div>
+                            </div>
+                            <div class="mt-2 flex items-baseline gap-1.5">
+                                <h4 id="kpi-scheduled-maint" class="text-2xl font-extrabold text-white font-mono">0</h4>
+                                <span class="text-[11px] text-slate-400">Tiket Aktif</span>
+                            </div>
+                            <p class="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1">
+                                <i class="fa-solid fa-clock"></i> Inspeksi & perbaikan minggu ini
+                            </p>
+                        </div>
+
+                        <!-- KPI 3 -->
+                        <div onclick="switchTab('spareparts')" class="cursor-pointer rounded-xl bg-slate-900 border border-slate-800 hover:border-rose-500/50 p-3.5 transition group">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Stok Kritis</span>
+                                <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center group-hover:scale-110 transition text-xs">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                </div>
+                            </div>
+                            <div class="mt-2 flex items-baseline gap-1.5">
+                                <h4 id="kpi-critical-stock" class="text-2xl font-extrabold text-rose-400 font-mono">0</h4>
+                                <span class="text-[11px] text-slate-400">Item Menipis</span>
+                            </div>
+                            <p class="text-[11px] text-rose-400 mt-1.5 flex items-center gap-1">
+                                <i class="fa-solid fa-arrow-trend-down"></i> Di bawah batas minimum aman
+                            </p>
+                        </div>
+
+                        <!-- KPI 4 -->
+                        <div onclick="switchTab('inventory')" class="cursor-pointer rounded-xl bg-slate-900 border border-slate-800 hover:border-sky-500/50 p-3.5 transition group">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tiket Gangguan / Rusak</span>
+                                <div class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center group-hover:scale-110 transition text-xs">
+                                    <i class="fa-solid fa-tower-broadcast"></i>
+                                </div>
+                            </div>
+                            <div class="mt-2 flex items-baseline gap-1.5">
+                                <h4 id="kpi-broken-assets" class="text-2xl font-extrabold text-white font-mono">0</h4>
+                                <span class="text-[11px] text-slate-400">Perangkat Offline</span>
+                            </div>
+                            <p class="text-[11px] text-sky-400 mt-1.5 flex items-center gap-1">
+                                <i class="fa-solid fa-wrench"></i> Memerlukan penggantian/cek
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Grafik Kesehatan Jaringan & Peringatan Stok -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        
+                        <!-- Status Kesehatan Perangkat & Distribusi Zona -->
+                        <div class="lg:col-span-2 rounded-xl bg-slate-900 border border-slate-800 p-4 space-y-3.5">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="text-sm font-bold text-white">Kesehatan Jaringan & Kesiapan Zona Tambang</h4>
+                                    <p class="text-[11px] text-slate-400">Persentase ketersediaan sinyal & status operasional perangkat keras</p>
+                                </div>
+                                <span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    SLA Target: 98.5%
+                                </span>
+                            </div>
+
+                            <!-- Progress Bars Zona -->
+                            <div class="space-y-3">
+                                <div>
+                                    <div class="flex justify-between text-[11px] mb-1">
+                                        <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+                                            <i class="fa-solid fa-mountain text-amber-400"></i> Pit Utara (Repeater Solar Cell & Haul Truck)
+                                        </span>
+                                        <span class="font-mono text-emerald-400 font-semibold">99.2% (Optimal)</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                        <div class="bg-emerald-500 h-full rounded-full" style="width: 99.2%"></div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between text-[11px] mb-1">
+                                        <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+                                            <i class="fa-solid fa-truck-monster text-amber-400"></i> Pit Selatan (Excavator PC2000 & Fleet Mesh)
+                                        </span>
+                                        <span class="font-mono text-amber-400 font-semibold">94.5% (Interferensi Ringan)</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                        <div class="bg-amber-500 h-full rounded-full" style="width: 94.5%"></div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between text-[11px] mb-1">
+                                        <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+                                            <i class="fa-solid fa-broadcast-tower text-amber-400"></i> Repeater Hill 1 (Backhaul Backbone 5GHz)
+                                        </span>
+                                        <span class="font-mono text-emerald-400 font-semibold">100% (Optimal)</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                        <div class="bg-emerald-500 h-full rounded-full" style="width: 100%"></div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between text-[11px] mb-1">
+                                        <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+                                            <i class="fa-solid fa-warehouse text-amber-400"></i> Workshop & Base Station Kantor
+                                        </span>
+                                        <span class="font-mono text-emerald-400 font-semibold">99.8% (Fiber Optic Link)</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                        <div class="bg-emerald-500 h-full rounded-full" style="width: 99.8%"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Komposisi Status Aset -->
+                            <div class="pt-2.5 border-t border-slate-800 grid grid-cols-3 gap-2.5 text-center">
+                                <div class="p-2.5 rounded-lg bg-slate-850 border border-slate-800">
+                                    <p class="text-[11px] text-slate-400">Aktif Terpasang</p>
+                                    <p id="stat-aktif" class="text-base font-bold text-emerald-400 font-mono mt-0.5">0</p>
+                                </div>
+                                <div class="p-2.5 rounded-lg bg-slate-850 border border-slate-800">
+                                    <p class="text-[11px] text-slate-400">Ready</p>
+                                    <p id="stat-cadangan" class="text-base font-bold text-amber-400 font-mono mt-0.5">0</p>
+                                </div>
+                                <div class="p-2.5 rounded-lg bg-slate-850 border border-slate-800">
+                                    <p class="text-[11px] text-slate-400">Rusak / Perbaikan</p>
+                                    <p id="stat-rusak" class="text-base font-bold text-rose-400 font-mono mt-0.5">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel Peringatan Stok Kritis -->
+                        <div class="rounded-xl bg-slate-900 border border-slate-800 p-4 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="text-sm font-bold text-white flex items-center gap-1.5">
+                                        <i class="fa-solid fa-bell text-rose-400"></i> Peringatan Stok Kritis
+                                    </h4>
+                                    <button onclick="switchTab('spareparts')" class="text-[11px] text-amber-400 hover:underline font-medium">Lihat Gudang</button>
+                                </div>
+                                <div id="dashboard-critical-list" class="space-y-2">
+                                    <!-- Diisi via JS -->
+                                </div>
+                            </div>
+                            <div class="mt-3 pt-3 border-t border-slate-800">
+                                <button onclick="switchTab('spareparts')" class="w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition">
+                                    Kelola Stok Suku Cadang
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aktivitas Maintenance Terbaru -->
+                    <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <h4 class="text-sm font-bold text-white">Jadwal & Aktivitas Maintenance Terbaru</h4>
+                                <p class="text-[11px] text-slate-400">Log pengerjaan preventive & corrective maintenance di area tambang</p>
+                            </div>
+                            <button onclick="switchTab('maintenance')" class="text-[11px] text-amber-400 hover:underline font-semibold">Semua Tiket &rarr;</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-800 text-[10px] uppercase text-slate-400">
+                                        <th class="py-2 px-2.5">ID Tiket</th>
+                                        <th class="py-2 px-2.5">Jenis</th>
+                                        <th class="py-2 px-2.5">Lokasi / No. Lambung</th>
+                                        <th class="py-2 px-2.5">Temuan / Pekerjaan</th>
+                                        <th class="py-2 px-2.5">Teknisi</th>
+                                        <th class="py-2 px-2.5">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-maint-table" class="divide-y divide-slate-800/70 text-xs">
+                                    <!-- Diisi via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== TAB 2: INVENTORI PERANGKAT ==================== -->
+                <section id="tab-inventory" class="tab-content hidden space-y-4">
+                    
+                    <!-- Filter & Action Bar -->
+                    <div class="rounded-xl bg-slate-900 border border-slate-800 p-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                        <div class="flex flex-col sm:flex-row gap-2.5 flex-1">
+                            <!-- Search -->
+                            <div class="relative flex-1 max-w-md">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <input type="text" id="searchDevice" oninput="renderInventory()" placeholder="Cari CN Unit, Type CPE, S/N, IP, MSISDN, atau PIC..." class="w-full pl-8 pr-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+                            </div>
+                            <!-- Filter Status -->
+                            <select id="filterDeviceStatus" onchange="renderInventory()" class="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+                                <option value="ALL">Semua Status Kondisi</option>
+                                <option value="Aktif">Aktif</option>
+                                <option value="Ready">Ready</option>
+                                <option value="Rusak">Rusak</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="confirmDeleteAll('inventory')" class="px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-xs font-semibold text-rose-400 flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-trash-can"></i> Hapus Semua
+                            </button>
+                            <button onclick="openModal('modalImportExcel')" class="px-3 py-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-xs font-semibold text-emerald-300 flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-file-excel text-emerald-400"></i> Import Excel
+                            </button>
+                            <button onclick="exportInventoryCSV()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-download text-emerald-400"></i> Ekspor CSV
+                            </button>
+                            <button onclick="openModal('modalAddDevice')" class="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition">
+                                <i class="fa-solid fa-plus"></i> + Tambah Perangkat
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Perangkat -->
+                    <div class="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-850 border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-400">
+                                        <th class="py-2.5 px-3">CN Unit & Type Unit</th>
+                                        <th class="py-2.5 px-3">Type CPE</th>
+                                        <th class="py-2.5 px-3">Serial Number</th>
+                                        <th class="py-2.5 px-3">IP Address</th>
+                                        <th class="py-2.5 px-3">MSISDN</th>
+                                        <th class="py-2.5 px-3">Tanggal</th>
+                                        <th class="py-2.5 px-3">Status</th>
+                                        <th class="py-2.5 px-3">PIC</th>
+                                        <th class="py-2.5 px-3 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventory-table-body" class="divide-y divide-slate-800/80 text-xs">
+                                    <!-- Diisi via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="inventory-empty" class="hidden py-10 text-center">
+                            <i class="fa-solid fa-server text-2xl text-slate-600 mb-1.5"></i>
+                            <p class="text-xs text-slate-400">Tidak ada perangkat jaringan yang sesuai dengan filter pencarian.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== TAB 3: MAINTENANCE & INSPEKSI ==================== -->
+                <section id="tab-maintenance" class="tab-content hidden space-y-4">
+                    
+                    <!-- Header Aksi Maintenance -->
+                    <div class="rounded-xl bg-slate-900 border border-slate-800 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <button onclick="filterMaint('ALL')" id="mfilter-ALL" class="mfilter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950">Semua Tiket</button>
+                            <button onclick="filterMaint('Terjadwal')" id="mfilter-Terjadwal" class="mfilter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700">Terjadwal</button>
+                            <button onclick="filterMaint('Proses')" id="mfilter-Proses" class="mfilter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700">Dalam Proses</button>
+                            <button onclick="filterMaint('Selesai')" id="mfilter-Selesai" class="mfilter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700">Selesai</button>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="confirmDeleteAll('maintenance')" class="px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-xs font-semibold text-rose-400 flex items-center justify-center gap-1.5 transition">
+                                <i class="fa-solid fa-trash-can"></i> Hapus Semua
+                            </button>
+                            <button onclick="openModal('modalAddMaintenance')" class="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20 transition">
+                                <i class="fa-solid fa-calendar-plus"></i> Buat Jadwal Maintenance
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Daftar Tiket Maintenance (Grid Kartu) -->
+                    <div id="maintenance-cards-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        <!-- Diisi via JS -->
+                    </div>
+                </section>
+
+                <!-- ==================== TAB 5: PETA TOPOLOGI & LOKASI ASET ==================== -->
+                <section id="tab-topology" class="tab-content hidden space-y-4">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        
+                        <!-- Kanvas Peta Topologi Interaktif -->
+                        <div class="lg:col-span-2 rounded-xl bg-slate-900 border border-slate-800 p-4 flex flex-col">
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                <div>
+                                    <h3 class="text-sm font-bold text-white">Topologi Jaringan Wireless & Mesh Pit</h3>
+                                    <p class="text-[11px] text-slate-400">Klik pada node lokasi untuk melihat kekuatan sinyal & daftar perangkat</p>
+                                </div>
+                                <div class="flex items-center gap-2.5 text-[10px]">
+                                    <span class="flex items-center gap-1 text-emerald-400"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Optimal</span>
+                                    <span class="flex items-center gap-1 text-amber-400"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Waspada</span>
+                                </div>
+                            </div>
+
+                            <!-- Area Peta Visual -->
+                            <div class="relative w-full h-[350px] sm:h-[380px] rounded-xl bg-slate-950 border border-slate-800 topo-grid overflow-hidden select-none">
+                                
+                                <!-- Garis Koneksi Backbone (SVG) -->
+                                <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 800 460" preserveAspectRatio="none">
+                                    <!-- Base Station ke Repeater Hill 1 (Backhaul Utama) -->
+                                    <line x1="160" y1="360" x2="400" y2="180" stroke="#10b981" stroke-width="3" stroke-dasharray="6 4" />
+                                    <!-- Base Station ke Workshop (Fiber Optic) -->
+                                    <line x1="160" y1="360" x2="440" y2="370" stroke="#38bdf8" stroke-width="3" />
+                                    <!-- Repeater Hill 1 ke Pit Utara -->
+                                    <line x1="400" y1="180" x2="220" y2="95" stroke="#10b981" stroke-width="2.5" stroke-dasharray="5 5" />
+                                    <!-- Repeater Hill 1 ke Pit Selatan -->
+                                    <line x1="400" y1="180" x2="640" y2="250" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="5 5" />
+                                </svg>
+
+                                <!-- Label Jalur -->
+                                <div class="hidden sm:block absolute left-[24%] top-[56%] bg-slate-900/90 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono px-2 py-0.5 rounded">
+                                    5.8GHz PTP Backhaul (-54 dBm)
+                                </div>
+                                <div class="hidden sm:block absolute left-[32%] top-[83%] bg-slate-900/90 border border-sky-500/30 text-sky-400 text-[10px] font-mono px-2 py-0.5 rounded">
+                                    Fiber Optic 10Gbps
+                                </div>
+
+                                <!-- NODE 1: PIT UTARA -->
+                                <button onclick="selectTopoNode('pit-utara')" id="node-pit-utara" class="topo-node absolute left-[18%] sm:left-[22%] top-[12%] sm:top-[14%] -translate-x-1/2 -translate-y-1/2 group flex flex-col items-center focus:outline-none">
+                                    <div class="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-900 border-2 border-emerald-500 text-emerald-400 shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition">
+                                        <span class="radar-ping absolute inset-0 rounded-2xl bg-emerald-500/40"></span>
+                                        <i class="fa-solid fa-solar-panel text-lg relative z-10"></i>
+                                    </div>
+                                    <span class="mt-1.5 px-2.5 py-0.5 rounded-lg bg-slate-900/95 border border-slate-700 text-[11px] font-bold text-white whitespace-nowrap shadow">
+                                        Pit Utara
+                                    </span>
+                                </button>
+
+                                <!-- NODE 2: REPEATER HILL 1 (PUSAT) -->
+                                <button onclick="selectTopoNode('repeater-hill')" id="node-repeater-hill" class="topo-node absolute left-[50%] top-[38%] -translate-x-1/2 -translate-y-1/2 group flex flex-col items-center focus:outline-none">
+                                    <div class="relative flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-500 text-slate-950 border-2 border-amber-300 shadow-xl shadow-amber-500/30 group-hover:scale-110 transition">
+                                        <span class="radar-ping absolute inset-0 rounded-2xl bg-amber-400/50"></span>
+                                        <i class="fa-solid fa-tower-broadcast text-xl relative z-10"></i>
+                                    </div>
+                                    <span class="mt-1.5 px-2.5 py-0.5 rounded-lg bg-amber-500 text-slate-950 text-[11px] font-extrabold whitespace-nowrap shadow">
+                                        Repeater Hill 1
+                                    </span>
+                                </button>
+
+                                <!-- NODE 3: PIT SELATAN -->
+                                <button onclick="selectTopoNode('pit-selatan')" id="node-pit-selatan" class="topo-node absolute left-[80%] top-[53%] -translate-x-1/2 -translate-y-1/2 group flex flex-col items-center focus:outline-none">
+                                    <div class="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-900 border-2 border-amber-500 text-amber-400 shadow-lg shadow-amber-500/20 group-hover:scale-110 transition">
+                                        <span class="radar-ping absolute inset-0 rounded-2xl bg-amber-500/40"></span>
+                                        <i class="fa-solid fa-truck-monster text-lg relative z-10"></i>
+                                    </div>
+                                    <span class="mt-1.5 px-2.5 py-0.5 rounded-lg bg-slate-900/95 border border-amber-500/50 text-[11px] font-bold text-amber-300 whitespace-nowrap shadow">
+                                        Pit Selatan
+                                    </span>
+                                </button>
+
+                                <!-- NODE 4: BASE STATION KANTOR -->
+                                <button onclick="selectTopoNode('base-station')" id="node-base-station" class="topo-node absolute left-[20%] top-[78%] -translate-x-1/2 -translate-y-1/2 group flex flex-col items-center focus:outline-none">
+                                    <div class="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-900 border-2 border-sky-500 text-sky-400 shadow-lg shadow-sky-500/20 group-hover:scale-110 transition">
+                                        <i class="fa-solid fa-server text-lg"></i>
+                                    </div>
+                                    <span class="mt-1.5 px-2.5 py-0.5 rounded-lg bg-slate-900/95 border border-slate-700 text-[11px] font-bold text-white whitespace-nowrap shadow">
+                                        Base Station Kantor
+                                    </span>
+                                </button>
+
+                                <!-- NODE 5: WORKSHOP -->
+                                <button onclick="selectTopoNode('workshop')" id="node-workshop" class="topo-node absolute left-[56%] top-[80%] -translate-x-1/2 -translate-y-1/2 group flex flex-col items-center focus:outline-none">
+                                    <div class="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-900 border-2 border-emerald-500 text-emerald-400 shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition">
+                                        <i class="fa-solid fa-warehouse text-lg"></i>
+                                    </div>
+                                    <span class="mt-1.5 px-2.5 py-0.5 rounded-lg bg-slate-900/95 border border-slate-700 text-[11px] font-bold text-white whitespace-nowrap shadow">
+                                        Workshop Utama
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Detail Node Terpilih -->
+                        <div class="rounded-xl bg-slate-900 border border-slate-800 p-4 flex flex-col justify-between">
+                            <div id="topo-detail-panel" class="space-y-3">
+                                <!-- Diisi dinamis saat node diklik -->
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-800">
+                                <button onclick="openModal('modalAddMaintenance')" class="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition">
+                                    <i class="fa-solid fa-wrench mr-1"></i> Jadwalkan Inspeksi Zona Ini
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+                <section id="tab-spareparts" class="tab-content hidden space-y-4">
+                    
+                    <div class="rounded-xl bg-slate-900 border border-slate-800 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Manajemen Gudang & Suku Cadang Jaringan</h3>
+                            <p class="text-[11px] text-slate-400">Kontrol stok komponen radio, antena, kabel FO, dan kelistrikan repeater</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="confirmDeleteAll('spareparts')" class="px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-xs font-semibold text-rose-400 flex items-center justify-center gap-1.5 transition">
+                                <i class="fa-solid fa-trash-can"></i> Hapus Semua
+                            </button>
+                            <button onclick="openStockModal()" class="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20 transition">
+                                <i class="fa-solid fa-right-left"></i> Catat Barang Keluar / Masuk
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Sparepart -->
+                    <div class="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-850 border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-400">
+                                        <th class="py-2.5 px-3">Kode Barang</th>
+                                        <th class="py-2.5 px-3">Nama Komponen</th>
+                                        <th class="py-2.5 px-3">Kategori & Rak</th>
+                                        <th class="py-2.5 px-3">Stok Saat Ini</th>
+                                        <th class="py-2.5 px-3">Batas Minimum</th>
+                                        <th class="py-2.5 px-3">Status Stok</th>
+                                        <th class="py-2.5 px-3 text-right">Aksi Cepat</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="spareparts-table-body" class="divide-y divide-slate-800/80 text-xs">
+                                    <!-- Diisi via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="spareparts-empty" class="hidden py-10 text-center">
+                            <i class="fa-solid fa-boxes-stacked text-2xl text-slate-600 mb-1.5"></i>
+                            <p class="text-xs text-slate-400">Belum ada data suku cadang di gudang.</p>
+                        </div>
+                    </div>
+                </section>
+
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 1: TAMBAH PERANGKAT ==================== -->
+    <div id="modalAddDevice" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between sticky top-0 bg-slate-900 z-10">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-server text-amber-400"></i> Tambah Perangkat Jaringan Baru
+                </h3>
+                <button onclick="closeModal('modalAddDevice')" class="text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleAddDevice(event)" class="p-4 space-y-3 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">CN Unit *</label>
+                        <input type="text" id="devCnUnit" required placeholder="Contoh: HD785-01 / EX2000-02" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:border-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">Type Unit *</label>
+                        <input type="text" id="devTypeUnit" required placeholder="Contoh: Dump Truck / Excavator" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">Type CPE *</label>
+                        <input type="text" id="devTypeCpe" required placeholder="Contoh: Rajant LX5 / Cisco" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">Serial Number (S/N) *</label>
+                        <input type="text" id="devSN" required placeholder="SN-MNT-2026-09" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:border-amber-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">IP Address *</label>
+                        <input type="text" id="devIP" required placeholder="10.20.14.105" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:border-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">MSISDN (No. SIM Card)</label>
+                        <input type="text" id="devMSISDN" placeholder="6281234567890" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:border-amber-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">Tanggal *</label>
+                        <input type="date" id="devDate" required class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">Status *</label>
+                        <select id="devStatus" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                            <option value="Aktif">Aktif</option>
+                            <option value="Ready">Ready</option>
+                            <option value="Rusak">Rusak</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 mb-1">PIC *</label>
+                    <input type="text" id="devPic" required placeholder="Nama Teknisi / Penanggung Jawab" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                </div>
+                <div class="pt-2.5 flex justify-end gap-2 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('modalAddDevice')" class="px-3.5 py-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-semibold">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">Simpan Perangkat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 2: BUAT JADWAL MAINTENANCE ==================== -->
+    <div id="modalAddMaintenance" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-screwdriver-wrench text-amber-400"></i> Buat Tiket Maintenance / Inspeksi
+                </h3>
+                <button onclick="closeModal('modalAddMaintenance')" class="text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleAddMaintenance(event)" class="p-4 space-y-3 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">Jenis Pekerjaan *</label>
+                        <select id="maintType" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                            <option value="Preventive">Preventive Maintenance</option>
+                            <option value="Corrective">Corrective Maintenance (Gangguan)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">Tanggal Jadwal *</label>
+                        <input type="date" id="maintDate" required class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">Lokasi / No. Lambung Unit *</label>
+                        <input type="text" id="maintLocation" required placeholder="Contoh: Repeater Pit Utara" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">Teknisi Bertugas *</label>
+                        <input type="text" id="maintTech" required placeholder="Nama Teknisi Lapangan" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 mb-1">Temuan Masalah / Checklist Inspeksi *</label>
+                    <textarea id="maintIssue" rows="2" required placeholder="Contoh: Pengecekan tegangan aki solar cell, pointing antena sektoral, dan kebersihan konektor." class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 mb-1">Rencana Tindakan Perbaikan</label>
+                    <input type="text" id="maintAction" placeholder="Contoh: Re-pointing antena & ganti pigtail coax" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                </div>
+                <div class="pt-2.5 flex justify-end gap-2 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('modalAddMaintenance')" class="px-3.5 py-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-semibold">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">Buat Jadwal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 3: CATAT BARANG KELUAR / MASUK ==================== -->
+    <div id="modalStockTx" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-boxes-stacked text-amber-400"></i> Mutasi Stok Suku Cadang
+                </h3>
+                <button onclick="closeModal('modalStockTx')" class="text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleStockTransaction(event)" class="p-4 space-y-3 text-xs">
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 mb-1">Pilih Suku Cadang *</label>
+                    <select id="txPartId" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                        <!-- Diisi via JS -->
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">Jenis Transaksi *</label>
+                        <select id="txType" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                            <option value="OUT">Barang Keluar (Pakai)</option>
+                            <option value="IN">Barang Masuk (Restock)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 mb-1">Jumlah *</label>
+                        <input type="number" id="txQty" min="1" value="1" required class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:border-amber-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-300 mb-1">Keterangan / Tujuan Unit *</label>
+                    <input type="text" id="txNote" required placeholder="Contoh: Pemasangan pada Unit PC2000-04" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-amber-500 focus:outline-none">
+                </div>
+                <div class="pt-2.5 flex justify-end gap-2 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('modalStockTx')" class="px-3.5 py-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-semibold">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">Simpan Transaksi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 4: KONFIRMASI HAPUS SEMUA ==================== -->
+    <div id="modalConfirmDeleteAll" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-3">
+        <div class="bg-slate-900 border border-rose-500/40 rounded-xl w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="p-4 text-center space-y-3">
+                <div class="w-11 h-11 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto text-xl">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h3 id="deleteAllTitle" class="text-base font-bold text-white">Konfirmasi Hapus Semua</h3>
+                    <p id="deleteAllMessage" class="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                        Apakah Anda yakin ingin menghapus semua data ini? Tindakan ini tidak dapat dibatalkan.
+                    </p>
+                </div>
+                <div class="pt-1.5 flex items-center justify-center gap-2.5">
+                    <button type="button" onclick="closeModal('modalConfirmDeleteAll')" class="flex-1 py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">
+                        Batal
+                    </button>
+                    <button type="button" onclick="executeDeleteAll()" class="flex-1 py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-600/20 transition">
+                        Ya, Hapus Semua
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 5: IMPORT DATA DARI EXCEL ==================== -->
+    <div id="modalImportExcel" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel text-emerald-400"></i> Import Inventori Perangkat dari Excel
+                </h3>
+                <button onclick="closeModal('modalImportExcel')" class="text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4 space-y-3 text-xs">
+                <!-- Info Format & Unduh Template -->
+                <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div>
+                        <p class="font-semibold text-slate-200">Butuh format kolom standar?</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Unduh template Excel (.xlsx) agar header kolom terbaca otomatis.</p>
+                    </div>
+                    <button type="button" onclick="downloadExcelTemplate()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 text-[11px] font-semibold flex items-center justify-center gap-1.5 shrink-0 transition">
+                        <i class="fa-solid fa-file-arrow-down"></i> Template Excel
+                    </button>
+                </div>
+
+                <!-- Dropzone / Input File -->
+                <div>
+                    <label for="excelFileInput" class="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-slate-700 hover:border-emerald-500/60 rounded-xl bg-slate-950/70 cursor-pointer transition p-3 text-center">
+                        <i class="fa-solid fa-cloud-arrow-up text-xl text-emerald-400 mb-1.5"></i>
+                        <p id="excelFileName" class="text-xs font-semibold text-slate-200">Klik untuk memilih file Excel (.xlsx, .xls, .csv)</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">Kolom: CN Unit, Type Unit, Type CPE, Serial Number, IP Address, MSISDN, Tanggal, Status, PIC</p>
+                        <input id="excelFileInput" type="file" accept=".xlsx,.xls,.csv" onchange="previewExcelFile(event)" class="hidden" />
+                    </label>
+                </div>
+
+                <!-- Mode Import -->
+                <div class="flex items-center justify-between gap-3 bg-slate-850 px-3 py-2 rounded-lg border border-slate-800">
+                    <span class="text-[11px] font-semibold text-slate-300">Mode Penggabungan Data:</span>
+                    <select id="importMode" class="px-2.5 py-1 rounded-md bg-slate-950 border border-slate-700 text-[11px] text-white focus:border-amber-500 focus:outline-none">
+                        <option value="append">Tambahkan ke Data yang Ada</option>
+                        <option value="replace">Ganti Semua Data Lama</option>
+                    </select>
+                </div>
+
+                <!-- Pratinjau Hasil Baca File -->
+                <div id="excelPreviewBox" class="hidden p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-300 space-y-0.5">
+                    <p id="excelPreviewSummary" class="font-bold"></p>
+                    <p id="excelPreviewSample" class="text-[10px] text-emerald-200/80 truncate"></p>
+                </div>
+
+                <div class="pt-2.5 flex justify-end gap-2 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('modalImportExcel')" class="px-3.5 py-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-semibold">Batal</button>
+                    <button type="button" id="btnConfirmImport" onclick="executeExcelImport()" disabled class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold transition">
+                        Import Sekarang
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TOAST NOTIFICATION CONTAINER ==================== -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- ==================== JAVASCRIPT LOGIKA APLIKASI ==================== -->
+    <script>
+        // --- 1. DATA AWAL (DEFAULT DEMO DATA) ---
+        const DEFAULT_DEVICES = [
+            { id: 'DEV-01', cnUnit: 'HD785-01', typeUnit: 'Dump Truck HD785', typeCpe: 'Rajant BreadCrumb LX5', sn: 'RJT-8841209', ip: '10.20.10.101', msisdn: '628115400101', date: '2026-03-14', status: 'Aktif', pic: 'Rizky Pratama' },
+            { id: 'DEV-02', cnUnit: 'HD785-04', typeUnit: 'Dump Truck HD785', typeCpe: 'Rajant BreadCrumb ES1', sn: 'RJT-8841244', ip: '10.20.10.102', msisdn: '628115400102', date: '2026-04-02', status: 'Aktif', pic: 'Rizky Pratama' },
+            { id: 'DEV-03', cnUnit: 'PC2000-02', typeUnit: 'Excavator PC2000', typeCpe: 'Cisco IW3702 Heavy Duty', sn: 'CSC-9920145', ip: '10.20.11.201', msisdn: '628115400201', date: '2026-02-19', status: 'Rusak', pic: 'Hendra Wijaya' },
+            { id: 'DEV-04', cnUnit: 'RPT-UTARA-01', typeUnit: 'Repeater Solar Cell', typeCpe: 'Cambium ePMP 3000', sn: 'CMB-7731098', ip: '10.20.1.10', msisdn: '628115400010', date: '2026-01-10', status: 'Aktif', pic: 'Dimas Saputra' },
+            { id: 'DEV-05', cnUnit: 'RPT-HILL-01', typeUnit: 'Repeater Backhaul', typeCpe: 'Ubiquiti Rocket Prism 5AC', sn: 'UBNT-551920', ip: '10.20.1.11', msisdn: '628115400011', date: '2026-01-12', status: 'Aktif', pic: 'Dimas Saputra' },
+            { id: 'DEV-06', cnUnit: 'AP-WSH-01', typeUnit: 'Access Point Workshop', typeCpe: 'Aruba AP-575 Outdoor', sn: 'ARB-6612093', ip: '10.20.5.50', msisdn: '-', date: '2026-05-20', status: 'Aktif', pic: 'Rizky Pratama' },
+            { id: 'DEV-07', cnUnit: 'CORE-NOC-01', typeUnit: 'Base Station Router', typeCpe: 'MikroTik CCR2004-1G-12S', sn: 'MKT-3301928', ip: '10.20.0.1', msisdn: '628115400001', date: '2026-01-05', status: 'Aktif', pic: 'Hendra Wijaya' },
+            { id: 'DEV-08', cnUnit: 'SPARE-IT-01', typeUnit: 'Unit Ready Gudang', typeCpe: 'Rajant BreadCrumb LX5', sn: 'RJT-8841999', ip: '10.20.10.250', msisdn: '628115400250', date: '2026-06-01', status: 'Ready', pic: 'Dimas Saputra' }
+        ];
+
+        const DEFAULT_MAINTENANCE = [
+            { id: 'MNT-2026-101', type: 'Preventive', location: 'Repeater Solar Cell Pit Utara', tech: 'Rizky Pratama', date: '2026-11-19', issue: 'Inspeksi rutin panel surya, tegangan baterai 12V, dan alignment antena sektoral.', action: 'Pembersihan panel surya & pengencangan bracket tower.', status: 'Terjadwal' },
+            { id: 'MNT-2026-102', type: 'Corrective', location: 'Excavator PC2000-02 (Pit Selatan)', tech: 'Hendra Wijaya', date: '2026-11-18', issue: 'Packet loss tinggi (>35%) dan radio Cisco IW3702 sering reboot akibat getaran.', action: 'Penggantian kabel power DC & unit radio cadangan.', status: 'Proses' },
+            { id: 'MNT-2026-103', type: 'Preventive', location: 'Access Point Workshop Utama', tech: 'Dimas Saputra', date: '2026-11-17', issue: 'Audit sinyal Wi-Fi area bay service alat berat.', action: 'Update firmware Aruba OS & perapian kabel UTP.', status: 'Selesai' },
+            { id: 'MNT-2026-104', type: 'Corrective', location: 'Unit HD785-04 (Haul Truck)', tech: 'Rizky Pratama', date: '2026-11-16', issue: 'Antena magnetik atap kabin patah tersangkut dahan.', action: 'Ganti antena omni 5GHz & tes ping ke Base Station.', status: 'Selesai' }
+        ];
+
+        const DEFAULT_SPAREPARTS = [
+            { id: 'SPR-001', name: 'Antena Sektoral 5GHz 19dBi', category: 'Antena & RF', rack: 'Rak A-01', stock: 2, minStock: 4, unit: 'Unit' },
+            { id: 'SPR-002', name: 'Kabel FO Outdoor 4 Core (1000m)', category: 'Kabel & Fiber', rack: 'Rak B-02', stock: 3, minStock: 2, unit: 'Roll' },
+            { id: 'SPR-003', name: 'Baterai Repeater Deep Cycle 12V 100Ah', category: 'Power & Solar', rack: 'Rak C-01', stock: 1, minStock: 3, unit: 'Unit' },
+            { id: 'SPR-004', name: 'Konektor RJ45 Industrial Shielded', category: 'Konektor', rack: 'Rak A-04', stock: 45, minStock: 20, unit: 'Pcs' },
+            { id: 'SPR-005', name: 'PoE Injector 48V Gigabit Heavy Duty', category: 'Power & Network', rack: 'Rak A-02', stock: 2, minStock: 3, unit: 'Unit' },
+            { id: 'SPR-006', name: 'Pigtail N-Male to RP-SMA Low Loss', category: 'Antena & RF', rack: 'Rak A-03', stock: 12, minStock: 5, unit: 'Pcs' }
+        ];
+
+        const TOPOLOGY_DATA = {
+            'pit-utara': {
+                name: 'Pit Utara (Area Tambang Aktif)',
+                status: 'Optimal',
+                statusColor: 'emerald',
+                uptime: '99.2%',
+                signal: '-56 dBm (Sangat Baik)',
+                bandwidth: '145 Mbps / 200 Mbps',
+                devices: ['Cambium ePMP 3000 + Solar', 'Unit HD785-01 (Haul Truck)', 'Unit HD785-04 (Haul Truck)'],
+                note: 'Cakupan sinyal penuh untuk sistem dispatch & telemetry truk angkut.'
+            },
+            'repeater-hill': {
+                name: 'Repeater Hill 1 (Backbone Utama)',
+                status: 'Optimal',
+                statusColor: 'emerald',
+                uptime: '100%',
+                signal: '-51 dBm (Backhaul PTP)',
+                bandwidth: '480 Mbps / 500 Mbps',
+                devices: ['Ubiquiti Rocket Prism 5AC', 'Solar Charge Controller MPPT', 'Switch Industrial 8-Port'],
+                note: 'Titik relai tertinggi yang menghubungkan seluruh area Pit ke Base Station Kantor.'
+            },
+            'pit-selatan': {
+                name: 'Pit Selatan (Front Loading)',
+                status: 'Waspada Interferensi',
+                statusColor: 'amber',
+                uptime: '94.5%',
+                signal: '-69 dBm (Cukup)',
+                bandwidth: '78 Mbps / 150 Mbps',
+                devices: ['Excavator PC2000-02 (Gangguan)', 'Portable Repeater Trailer 02'],
+                note: 'Ditemukan 1 unit radio excavator offline. Teknisi sedang melakukan penanganan tiket MNT-2026-102.'
+            },
+            'base-station': {
+                name: 'Base Station Kantor Utama',
+                status: 'Optimal',
+                statusColor: 'emerald',
+                uptime: '99.9%',
+                signal: 'Core NOC & Server',
+                bandwidth: '10 Gbps Fiber Core',
+                devices: ['MikroTik CCR2004-1G-12S', 'Server Fleet Management', 'Core Distribution Switch'],
+                note: 'Pusat kontrol jaringan site, monitoring NMS, dan server aplikasi tambang.'
+            },
+            'workshop': {
+                name: 'Workshop Utama & Warehouse',
+                status: 'Optimal',
+                statusColor: 'emerald',
+                uptime: '99.8%',
+                signal: '-52 dBm (Wi-Fi Outdoor)',
+                bandwidth: '850 Mbps / 1 Gbps',
+                devices: ['Aruba AP-575 Outdoor', 'Switch PoE Workshop Bay 1-4'],
+                note: 'Mendukung diagnostik elektronik alat berat dan sistem gudang suku cadang.'
+            }
+        };
+
+        // --- 2. STATE MANAGEMENT (LOCALSTORAGE) ---
+        let devices = JSON.parse(localStorage.getItem('minenet_devices')) || DEFAULT_DEVICES;
+        let maintenances = JSON.parse(localStorage.getItem('minenet_maintenance')) || DEFAULT_MAINTENANCE;
+        let spareparts = JSON.parse(localStorage.getItem('minenet_spareparts')) || DEFAULT_SPAREPARTS;
+        let currentMaintFilter = 'ALL';
+        let pendingDeleteTarget = null;
+        let parsedExcelDevices = [];
+
+        function saveState() {
+            localStorage.setItem('minenet_devices', JSON.stringify(devices));
+            localStorage.setItem('minenet_maintenance', JSON.stringify(maintenances));
+            localStorage.setItem('minenet_spareparts', JSON.stringify(spareparts));
+            refreshAllUI();
+        }
+
+        function resetDemoData() {
+            devices = JSON.parse(JSON.stringify(DEFAULT_DEVICES));
+            maintenances = JSON.parse(JSON.stringify(DEFAULT_MAINTENANCE));
+            spareparts = JSON.parse(JSON.stringify(DEFAULT_SPAREPARTS));
+            saveState();
+            showToast('Data simulasi berhasil dikembalikan ke pengaturan awal.', 'info');
+        }
+
+        // --- 3. NAVIGASI & UI HELPERS ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        function switchTab(tabId) {
+            // Sembunyikan semua tab
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            // Update tombol navigasi aktif
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-amber-500', 'text-slate-950', 'font-semibold', 'shadow-md', 'shadow-amber-500/15');
+                btn.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-800/70');
+            });
+
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            activeBtn.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-800/70');
+            activeBtn.classList.add('bg-amber-500', 'text-slate-950', 'font-semibold', 'shadow-md', 'shadow-amber-500/15');
+
+            // Update judul header
+            const titles = {
+                'dashboard': ['Dashboard Operasional', 'Pemantauan real-time kesehatan jaringan unit tambang & repeater lapangan'],
+                'inventory': ['Inventori Perangkat Jaringan', 'Database radio unit berat, repeater solar cell, access point, dan switch'],
+                'maintenance': ['Maintenance & Inspeksi Lapangan', 'Penjadwalan preventive maintenance & penanganan tiket gangguan'],
+                'spareparts': ['Stok Suku Cadang (Sparepart)', 'Kontrol ketersediaan antena, kabel FO, baterai repeater, dan komponen'],
+                'topology': ['Peta Topologi & Lokasi Aset', 'Visualisasi interaktif titik repeater, backhaul, dan cakupan sinyal pit']
+            };
+            document.getElementById('pageTitle').textContent = titles[tabId][0];
+            document.getElementById('pageSubtitle').textContent = titles[tabId][1];
+
+            // Tutup sidebar di mobile setelah klik
+            if (window.innerWidth < 1024) {
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar.classList.contains('-translate-x-full')) {
+                    toggleSidebar();
+                }
+            }
+        }
+
+        function openModal(modalId) {
+            // Set default tanggal hari ini pada form tanggal
+            const today = new Date().toISOString().split('T')[0];
+            if (modalId === 'modalAddDevice') document.getElementById('devDate').value = today;
+            if (modalId === 'modalAddMaintenance') document.getElementById('maintDate').value = today;
+
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            if (modalId === 'modalImportExcel') {
+                parsedExcelDevices = [];
+                document.getElementById('excelFileInput').value = '';
+                document.getElementById('excelFileName').textContent = 'Klik untuk memilih file Excel (.xlsx, .xls, .csv)';
+                document.getElementById('excelPreviewBox').classList.add('hidden');
+                document.getElementById('btnConfirmImport').disabled = true;
+            }
+        }
+
+        // --- 4. NOTIFIKASI TOAST INTERAKTIF ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const styles = {
+                success: 'bg-slate-900 border-emerald-500/60 text-white',
+                warning: 'bg-slate-900 border-rose-500/70 text-white',
+                info: 'bg-slate-900 border-amber-500/60 text-white'
+            };
+            const icons = {
+                success: '<i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>',
+                warning: '<i class="fa-solid fa-triangle-exclamation text-rose-400 text-lg"></i>',
+                info: '<i class="fa-solid fa-circle-info text-amber-400 text-lg"></i>'
+            };
+
+            toast.className = `pointer-events-auto flex items-start gap-3 p-4 rounded-2xl border shadow-2xl transition-all duration-300 translate-y-2 opacity-0 ${styles[type]}`;
+            toast.innerHTML = `
+                <div class="mt-0.5">${icons[type]}</div>
+                <div class="flex-1 text-xs sm:text-sm leading-relaxed">${message}</div>
+                <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
+            `;
+
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4500);
+        }
+
+        // --- 5. RENDER DASHBOARD ---
+        function renderDashboard() {
+            const activeCount = devices.filter(d => d.status === 'Aktif').length;
+            const reserveCount = devices.filter(d => d.status === 'Ready' || d.status === 'Cadangan').length;
+            const brokenCount = devices.filter(d => d.status === 'Rusak').length;
+            const activeMaintCount = maintenances.filter(m => m.status !== 'Selesai').length;
+            const criticalParts = spareparts.filter(p => p.stock <= p.minStock);
+
+            // KPI Cards
+            document.getElementById('kpi-active-assets').textContent = activeCount;
+            document.getElementById('kpi-total-assets').textContent = `/ ${devices.length} Total Unit`;
+            document.getElementById('kpi-scheduled-maint').textContent = activeMaintCount;
+            document.getElementById('kpi-critical-stock').textContent = criticalParts.length;
+            document.getElementById('kpi-broken-assets').textContent = brokenCount;
+
+            // Komposisi Status
+            document.getElementById('stat-aktif').textContent = activeCount;
+            document.getElementById('stat-cadangan').textContent = reserveCount;
+            document.getElementById('stat-rusak').textContent = brokenCount;
+
+            // Sidebar Badges
+            document.getElementById('badge-inventory').textContent = devices.length;
+            document.getElementById('badge-maintenance').textContent = activeMaintCount;
+            const badgeCrit = document.getElementById('badge-critical');
+            if (criticalParts.length > 0) {
+                badgeCrit.textContent = criticalParts.length;
+                badgeCrit.classList.remove('hidden');
+            } else {
+                badgeCrit.classList.add('hidden');
+            }
+
+            // Daftar Peringatan Stok Kritis di Dashboard
+            const critContainer = document.getElementById('dashboard-critical-list');
+            if (criticalParts.length === 0) {
+                critContainer.innerHTML = `
+                    <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2.5">
+                        <i class="fa-solid fa-circle-check text-base"></i>
+                        <span>Seluruh stok suku cadang berada di atas batas minimum aman.</span>
+                    </div>
+                `;
+            } else {
+                critContainer.innerHTML = criticalParts.map(item => `
+                    <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-bold text-white">${item.name}</p>
+                            <p class="text-[11px] text-rose-300 mt-0.5">Sisa: <strong class="font-mono">${item.stock} ${item.unit}</strong> (Min: ${item.minStock})</p>
+                        </div>
+                        <button onclick="openStockModal('${item.id}', 'IN')" class="px-2.5 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-400 text-white text-[11px] font-bold shrink-0 transition">
+                            + Restock
+                        </button>
+                    </div>
+                `).join('');
+            }
+
+            // Tabel Aktivitas Maintenance Terbaru
+            const maintTable = document.getElementById('dashboard-maint-table');
+            if (maintenances.length === 0) {
+                maintTable.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-xs text-slate-500">Belum ada data jadwal atau aktivitas maintenance.</td>
+                    </tr>
+                `;
+            } else {
+                maintTable.innerHTML = maintenances.slice(0, 4).map(m => {
+                    const badgeClass = m.status === 'Selesai' 
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' 
+                        : m.status === 'Proses' 
+                            ? 'bg-sky-500/15 text-sky-400 border-sky-500/30' 
+                            : 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+                    const typeColor = m.type === 'Corrective' ? 'text-rose-400' : 'text-amber-400';
+
+                    return `
+                        <tr class="hover:bg-slate-850/60 transition">
+                            <td class="py-2 px-2.5 font-mono text-[11px] text-slate-300 font-semibold">${m.id}</td>
+                            <td class="py-2 px-2.5 text-[11px] font-semibold ${typeColor}">${m.type}</td>
+                            <td class="py-2 px-2.5 font-medium text-white">${m.location}</td>
+                            <td class="py-2 px-2.5 text-slate-400 max-w-xs truncate">${m.issue}</td>
+                            <td class="py-2 px-2.5 text-slate-300">${m.tech}</td>
+                            <td class="py-2 px-2.5">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeClass}">${m.status}</span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // --- 6. RENDER & AKSI INVENTORI PERANGKAT ---
+        function renderInventory() {
+            const query = document.getElementById('searchDevice').value.toLowerCase();
+            const statusFilter = document.getElementById('filterDeviceStatus').value;
+
+            const filtered = devices.filter(d => {
+                const cnUnit = (d.cnUnit || d.location || '').toLowerCase();
+                const typeUnit = (d.typeUnit || d.category || '').toLowerCase();
+                const typeCpe = (d.typeCpe || d.name || '').toLowerCase();
+                const pic = (d.pic || '').toLowerCase();
+
+                const matchText = cnUnit.includes(query) ||
+                                  typeUnit.includes(query) ||
+                                  typeCpe.includes(query) ||
+                                  (d.sn || '').toLowerCase().includes(query) ||
+                                  (d.ip || '').toLowerCase().includes(query) ||
+                                  (d.msisdn || '').toLowerCase().includes(query) ||
+                                  pic.includes(query);
+                const normalizedStatus = d.status === 'Cadangan' ? 'Ready' : d.status;
+                const matchStatus = statusFilter === 'ALL' || normalizedStatus === statusFilter;
+                return matchText && matchStatus;
+            });
+
+            const tbody = document.getElementById('inventory-table-body');
+            const emptyState = document.getElementById('inventory-empty');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            tbody.innerHTML = filtered.map(d => {
+                const currentStatus = d.status === 'Cadangan' ? 'Ready' : d.status;
+                let statusBadge = '';
+                if (currentStatus === 'Aktif') {
+                    statusBadge = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+                } else if (currentStatus === 'Ready') {
+                    statusBadge = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+                } else {
+                    statusBadge = 'bg-rose-500/15 text-rose-400 border-rose-500/30';
+                }
+
+                const cnUnitDisplay = d.cnUnit || d.location || '-';
+                const typeUnitDisplay = d.typeUnit || d.category || '-';
+                const typeCpeDisplay = d.typeCpe || d.name || '-';
+                const picDisplay = d.pic || '-';
+
+                return `
+                    <tr class="hover:bg-slate-850/70 transition">
+                        <td class="py-2.5 px-3">
+                            <p class="font-bold text-white font-mono leading-tight">${cnUnitDisplay}</p>
+                            <span class="text-[10px] text-slate-400">${typeUnitDisplay}</span>
+                        </td>
+                        <td class="py-2.5 px-3 font-semibold text-slate-200">${typeCpeDisplay}</td>
+                        <td class="py-2.5 px-3 font-mono text-[11px] text-amber-300">${d.sn}</td>
+                        <td class="py-2.5 px-3 font-mono text-[11px] text-slate-200">${d.ip}</td>
+                        <td class="py-2.5 px-3 font-mono text-[11px] text-sky-300">${d.msisdn || '-'}</td>
+                        <td class="py-2.5 px-3 text-[11px] text-slate-400">${d.date}</td>
+                        <td class="py-2.5 px-3">
+                            <select onchange="changeDeviceStatus('${d.id}', this.value)" class="px-2 py-0.5 rounded-md text-[11px] font-semibold border cursor-pointer focus:outline-none bg-slate-950 ${statusBadge}">
+                                <option value="Aktif" ${currentStatus === 'Aktif' ? 'selected' : ''}>Aktif</option>
+                                <option value="Ready" ${currentStatus === 'Ready' ? 'selected' : ''}>Ready</option>
+                                <option value="Rusak" ${currentStatus === 'Rusak' ? 'selected' : ''}>Rusak</option>
+                            </select>
+                        </td>
+                        <td class="py-2.5 px-3 text-[11px] font-medium text-slate-300">${picDisplay}</td>
+                        <td class="py-2.5 px-3 text-right">
+                            <button onclick="deleteDevice('${d.id}')" title="Hapus Perangkat" class="p-1.5 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function handleAddDevice(e) {
+            e.preventDefault();
+            const newDev = {
+                id: 'DEV-' + Date.now(),
+                cnUnit: document.getElementById('devCnUnit').value.trim().toUpperCase(),
+                typeUnit: document.getElementById('devTypeUnit').value.trim(),
+                typeCpe: document.getElementById('devTypeCpe').value.trim(),
+                sn: document.getElementById('devSN').value.trim().toUpperCase(),
+                ip: document.getElementById('devIP').value.trim(),
+                msisdn: document.getElementById('devMSISDN').value.trim() || '-',
+                date: document.getElementById('devDate').value,
+                status: document.getElementById('devStatus').value,
+                pic: document.getElementById('devPic').value.trim()
+            };
+
+            devices.unshift(newDev);
+            saveState();
+            e.target.reset();
+            closeModal('modalAddDevice');
+            showToast(`Data perangkat <strong>${newDev.cnUnit}</strong> (${newDev.typeCpe}) berhasil ditambahkan ke sistem inventori.`, 'success');
+        }
+
+        function changeDeviceStatus(id, newStatus) {
+            const dev = devices.find(d => d.id === id);
+            if (dev) {
+                dev.status = newStatus;
+                saveState();
+                const toastType = newStatus === 'Rusak' ? 'warning' : 'success';
+                showToast(`Status perangkat <strong>${dev.cnUnit || dev.name}</strong> (${dev.typeCpe || dev.location}) diperbarui menjadi <strong>${newStatus}</strong>.`, toastType);
+            }
+        }
+
+        function deleteDevice(id) {
+            const dev = devices.find(d => d.id === id);
+            if (dev) {
+                devices = devices.filter(d => d.id !== id);
+                saveState();
+                showToast(`Perangkat <strong>${dev.cnUnit || dev.name}</strong> dihapus dari daftar inventori.`, 'info');
+            }
+        }
+
+        function deleteDevice(id) {
+            const dev = devices.find(d => d.id === id);
+            if (dev) {
+                devices = devices.filter(d => d.id !== id);
+                saveState();
+                showToast(`Perangkat <strong>${dev.name}</strong> dihapus dari daftar inventori.`, 'info');
+            }
+        }
+
+        // --- 7. RENDER & AKSI MAINTENANCE ---
+        function filterMaint(status) {
+            currentMaintFilter = status;
+            document.querySelectorAll('.mfilter-btn').forEach(btn => {
+                btn.classList.remove('bg-amber-500', 'text-slate-950');
+                btn.classList.add('bg-slate-800', 'text-slate-300');
+            });
+            const active = document.getElementById(`mfilter-${status}`);
+            active.classList.remove('bg-slate-800', 'text-slate-300');
+            active.classList.add('bg-amber-500', 'text-slate-950');
+            renderMaintenance();
+        }
+
+        function renderMaintenance() {
+            const grid = document.getElementById('maintenance-cards-grid');
+            if (!grid) return;
+            const filtered = maintenances.filter(m => currentMaintFilter === 'ALL' || m.status === currentMaintFilter);
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full rounded-2xl bg-slate-900 border border-slate-800 p-10 text-center">
+                        <i class="fa-solid fa-clipboard-list text-3xl text-slate-600 mb-2"></i>
+                        <p class="text-sm text-slate-400">Belum ada jadwal maintenance pada filter ini. Klik 'Buat Jadwal Maintenance' untuk menambahkan.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(m => {
+                const isCorrective = m.type === 'Corrective';
+                const typeBadge = isCorrective 
+                    ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' 
+                    : 'bg-sky-500/15 text-sky-400 border-sky-500/30';
+
+                const statusBadge = m.status === 'Selesai'
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : m.status === 'Proses'
+                        ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                        : 'bg-slate-800 text-slate-300 border-slate-700';
+
+                return `
+                    <div class="rounded-xl bg-slate-900 border border-slate-800 p-3.5 flex flex-col justify-between gap-3 hover:border-slate-700 transition">
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-mono text-[11px] font-bold text-amber-400">${m.id}</span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${typeBadge}">${m.type}</span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusBadge}">${m.status}</span>
+                            </div>
+
+                            <div>
+                                <h4 class="text-sm font-bold text-white">${m.location}</h4>
+                                <p class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2.5">
+                                    <span><i class="fa-regular fa-calendar mr-1 text-amber-400"></i> ${m.date}</span>
+                                    <span><i class="fa-solid fa-user-gear mr-1 text-amber-400"></i> ${m.tech}</span>
+                                </p>
+                            </div>
+
+                            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 space-y-1 text-[11px]">
+                                <p class="text-slate-300"><strong class="text-slate-400">Temuan:</strong> ${m.issue}</p>
+                                <p class="text-slate-300"><strong class="text-slate-400">Tindakan:</strong> ${m.action || 'Menunggu inspeksi lapangan'}</p>
+                            </div>
+                        </div>
+
+                        <div class="pt-2.5 border-t border-slate-800 flex items-center justify-between gap-2">
+                            ${m.status !== 'Selesai' ? `
+                                <div class="flex gap-1.5 w-full">
+                                    ${m.status === 'Terjadwal' ? `
+                                        <button onclick="updateMaintStatus('${m.id}', 'Proses')" class="flex-1 py-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 text-[11px] font-semibold transition">
+                                            <i class="fa-solid fa-play mr-1"></i> Mulai Kerjakan
+                                        </button>
+                                    ` : ''}
+                                    <button onclick="updateMaintStatus('${m.id}', 'Selesai')" class="flex-1 py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition">
+                                        <i class="fa-solid fa-check mr-1"></i> Tandai Selesai
+                                    </button>
+                                </div>
+                            ` : `
+                                <span class="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-check"></i> Inspeksi & perbaikan telah diverifikasi selesai
+                                </span>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleAddMaintenance(e) {
+            e.preventDefault();
+            const randomNum = Math.floor(105 + Math.random() * 890);
+            const newMaint = {
+                id: `MNT-2026-${randomNum}`,
+                type: document.getElementById('maintType').value,
+                date: document.getElementById('maintDate').value,
+                location: document.getElementById('maintLocation').value.trim(),
+                tech: document.getElementById('maintTech').value.trim(),
+                issue: document.getElementById('maintIssue').value.trim(),
+                action: document.getElementById('maintAction').value.trim() || 'Inspeksi standar lapangan',
+                status: 'Terjadwal'
+            };
+
+            maintenances.unshift(newMaint);
+            saveState();
+            e.target.reset();
+            closeModal('modalAddMaintenance');
+            showToast(`Tiket jadwal <strong>${newMaint.id}</strong> untuk <strong>${newMaint.location}</strong> berhasil dibuat.`, 'success');
+        }
+
+        function updateMaintStatus(id, newStatus) {
+            const item = maintenances.find(m => m.id === id);
+            if (item) {
+                item.status = newStatus;
+                saveState();
+                showToast(`Tiket <strong>${item.id}</strong> (${item.location}) diperbarui ke status <strong>${newStatus}</strong>.`, 'success');
+            }
+        }
+
+        // --- 8. RENDER & AKSI STOK SUKU CADANG ---
+        function renderSpareparts() {
+            const tbody = document.getElementById('spareparts-table-body');
+            const emptyState = document.getElementById('spareparts-empty');
+
+            if (spareparts.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            tbody.innerHTML = spareparts.map(p => {
+                const isCritical = p.stock <= p.minStock;
+                const statusBadge = isCritical
+                    ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30"><i class="fa-solid fa-triangle-exclamation"></i> Stok Kritis</span>`
+                    : `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"><i class="fa-solid fa-check"></i> Aman</span>`;
+
+                return `
+                    <tr class="hover:bg-slate-850/70 transition ${isCritical ? 'bg-rose-950/10' : ''}">
+                        <td class="py-2.5 px-3 font-mono text-[11px] text-slate-400">${p.id}</td>
+                        <td class="py-2.5 px-3 font-bold text-white">${p.name}</td>
+                        <td class="py-2.5 px-3 text-[11px] text-slate-300">
+                            <span>${p.category}</span>
+                            <span class="ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]">${p.rack}</span>
+                        </td>
+                        <td class="py-2.5 px-3 font-mono font-bold text-xs ${isCritical ? 'text-rose-400' : 'text-emerald-400'}">
+                            ${p.stock} <span class="text-[11px] font-normal text-slate-400">${p.unit}</span>
+                        </td>
+                        <td class="py-2.5 px-3 font-mono text-[11px] text-slate-400">${p.minStock} ${p.unit}</td>
+                        <td class="py-2.5 px-3">${statusBadge}</td>
+                        <td class="py-2.5 px-3 text-right space-x-1">
+                            <button onclick="openStockModal('${p.id}', 'OUT')" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-rose-500/20 hover:text-rose-300 border border-slate-700 text-[11px] font-semibold transition">
+                                - Pakai
+                            </button>
+                            <button onclick="openStockModal('${p.id}', 'IN')" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-emerald-500/20 hover:text-emerald-300 border border-slate-700 text-[11px] font-semibold transition">
+                                + Masuk
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openStockModal(partId = null, txType = 'OUT') {
+            const select = document.getElementById('txPartId');
+            select.innerHTML = spareparts.map(p => `<option value="${p.id}">${p.name} (Sisa: ${p.stock} ${p.unit})</option>`).join('');
+            
+            if (partId) select.value = partId;
+            document.getElementById('txType').value = txType;
+            document.getElementById('txQty').value = 1;
+            document.getElementById('txNote').value = '';
+            openModal('modalStockTx');
+        }
+
+        function handleStockTransaction(e) {
+            e.preventDefault();
+            const partId = document.getElementById('txPartId').value;
+            const type = document.getElementById('txType').value;
+            const qty = parseInt(document.getElementById('txQty').value, 10);
+            const note = document.getElementById('txNote').value.trim();
+
+            const part = spareparts.find(p => p.id === partId);
+            if (!part) return;
+
+            if (type === 'OUT') {
+                if (qty > part.stock) {
+                    showToast(`Gagal: Jumlah barang keluar (${qty}) melebihi stok tersedia (${part.stock} ${part.unit}).`, 'warning');
+                    return;
+                }
+                part.stock -= qty;
+                saveState();
+                closeModal('modalStockTx');
+
+                if (part.stock <= part.minStock) {
+                    showToast(`Peringatan: Stok <strong>${part.name}</strong> tersisa <strong>${part.stock} ${part.unit}</strong> (Batas kritis). Segera ajukan pembelian!`, 'warning');
+                } else {
+                    showToast(`Pengeluaran ${qty} ${part.unit} <strong>${part.name}</strong> (${note}) berhasil dicatat.`, 'info');
+                }
+            } else {
+                part.stock += qty;
+                saveState();
+                closeModal('modalStockTx');
+                showToast(`Penambahan stok ${qty} ${part.unit} <strong>${part.name}</strong> berhasil disimpan.`, 'success');
+            }
+        }
+
+        // --- 8B. HAPUS SEMUA DATA (PER MODUL & SISTEM) ---
+        function confirmDeleteAll(target) {
+            const targetConfig = {
+                inventory: {
+                    count: devices.length,
+                    emptyMsg: 'Data Inventori Perangkat sudah kosong.',
+                    title: 'Hapus Semua Inventori Perangkat?',
+                    desc: 'Apakah Anda yakin ingin menghapus semua data <strong>Inventori Perangkat Jaringan</strong> di SITE KALIMANTAN - SITE KPCS? Tindakan ini tidak dapat dibatalkan.'
+                },
+                maintenance: {
+                    count: maintenances.length,
+                    emptyMsg: 'Data Jadwal Maintenance sudah kosong.',
+                    title: 'Hapus Semua Jadwal Maintenance?',
+                    desc: 'Apakah Anda yakin ingin menghapus semua data tiket <strong>Maintenance & Inspeksi</strong>? Tindakan ini tidak dapat dibatalkan.'
+                },
+                spareparts: {
+                    count: spareparts.length,
+                    emptyMsg: 'Data Stok Suku Cadang sudah kosong.',
+                    title: 'Hapus Semua Stok Suku Cadang?',
+                    desc: 'Apakah Anda yakin ingin menghapus seluruh daftar <strong>Stok Suku Cadang (Sparepart)</strong> dari gudang? Tindakan ini tidak dapat dibatalkan.'
+                },
+                all: {
+                    count: devices.length + maintenances.length + spareparts.length,
+                    emptyMsg: 'Seluruh data sistem sudah kosong.',
+                    title: 'Hapus Seluruh Data Sistem?',
+                    desc: 'Apakah Anda yakin ingin mengosongkan <strong>semua data</strong> (Inventori, Maintenance, dan Suku Cadang) untuk SITE KALIMANTAN - SITE KPCS? Gunakan tombol Reset di samping jika ingin mengembalikan data demo.'
+                }
+            };
+
+            const cfg = targetConfig[target];
+            if (!cfg) return;
+
+            if (cfg.count === 0) {
+                showToast(cfg.emptyMsg, 'info');
+                return;
+            }
+
+            pendingDeleteTarget = target;
+            document.getElementById('deleteAllTitle').textContent = cfg.title;
+            document.getElementById('deleteAllMessage').innerHTML = cfg.desc;
+            openModal('modalConfirmDeleteAll');
+        }
+
+        function executeDeleteAll() {
+            if (!pendingDeleteTarget) return;
+
+            if (pendingDeleteTarget === 'inventory') {
+                devices = [];
+                showToast('Semua data <strong>Inventori Perangkat</strong> berhasil dihapus.', 'warning');
+            } else if (pendingDeleteTarget === 'maintenance') {
+                maintenances = [];
+                showToast('Semua data <strong>Maintenance & Inspeksi</strong> berhasil dihapus.', 'warning');
+            } else if (pendingDeleteTarget === 'spareparts') {
+                spareparts = [];
+                showToast('Semua data <strong>Stok Suku Cadang</strong> berhasil dihapus.', 'warning');
+            } else if (pendingDeleteTarget === 'all') {
+                devices = [];
+                maintenances = [];
+                spareparts = [];
+                showToast('Seluruh data operasional <strong>SITE KALIMANTAN - SITE KPCS</strong> telah dikosongkan.', 'warning');
+            }
+
+            pendingDeleteTarget = null;
+            saveState();
+            closeModal('modalConfirmDeleteAll');
+        }
+
+        // --- 9. PETA TOPOLOGI INTERAKTIF ---
+        function selectTopoNode(nodeKey) {
+            const data = TOPOLOGY_DATA[nodeKey];
+            if (!data) return;
+
+            const badgeColor = data.statusColor === 'emerald' 
+                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' 
+                : 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+
+            const panel = document.getElementById('topo-detail-panel');
+            panel.innerHTML = `
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <span class="text-[11px] font-mono uppercase tracking-wider text-amber-400">Detail Zona Jaringan</span>
+                        <h4 class="text-lg font-bold text-white mt-0.5">${data.name}</h4>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold border ${badgeColor}">${data.status}</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                        <p class="text-[11px] text-slate-400">Uptime Link</p>
+                        <p class="text-base font-bold text-emerald-400 font-mono mt-0.5">${data.uptime}</p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                        <p class="text-[11px] text-slate-400">Kekuatan Sinyal</p>
+                        <p class="text-xs font-bold text-white font-mono mt-1">${data.signal}</p>
+                    </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                    <p class="text-[11px] text-slate-400">Kapasitas Throughput</p>
+                    <p class="text-xs font-semibold text-sky-400 font-mono mt-0.5">${data.bandwidth}</p>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold text-slate-300 mb-2">Perangkat Terpasang di Zona Ini:</p>
+                    <ul class="space-y-1.5">
+                        ${data.devices.map(dev => `
+                            <li class="flex items-center gap-2 text-xs text-slate-300 bg-slate-850 px-3 py-2 rounded-lg border border-slate-800">
+                                <i class="fa-solid fa-wifi text-amber-400 text-[10px]"></i>
+                                <span>${dev}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+
+                <p class="text-xs text-slate-400 italic leading-relaxed bg-slate-850/60 p-3 rounded-xl border border-slate-800/80">
+                    "${data.note}"
+                </p>
+            `;
+        }
+
+        // --- 10. EKSPOR LAPORAN CSV ---
+        function exportInventoryCSV() {
+            const headers = ['ID Aset', 'CN Unit', 'Type Unit', 'Type CPE', 'Serial Number', 'IP Address', 'MSISDN', 'Tanggal', 'Status', 'PIC'];
+            const rows = devices.map(d => [
+                d.id,
+                `"${d.cnUnit || d.location || '-'}"`,
+                `"${d.typeUnit || d.category || '-'}"`,
+                `"${d.typeCpe || d.name || '-'}"`,
+                d.sn,
+                d.ip,
+                `"${d.msisdn || '-'}"`,
+                d.date,
+                d.status,
+                `"${d.pic || '-'}"`
+            ]);
+
+            const csvContent = "data:text/csv;charset=utf-8," 
+                + headers.join(",") + "\n" 
+                + rows.map(e => e.join(",")).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Laporan_Inventori_Site_Kalimantan_Site_KPCS_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast('Laporan inventori jaringan <strong>Site Kalimantan - Site KPCS</strong> berhasil diunduh dalam format <strong>CSV</strong>.', 'success');
+        }
+
+        // --- 10B. IMPORT DATA DARI EXCEL (.XLSX / .XLS / .CSV) ---
+        function downloadExcelTemplate() {
+            if (typeof XLSX === 'undefined') {
+                showToast('Library Excel sedang dimuat, silakan coba beberapa saat lagi.', 'warning');
+                return;
+            }
+
+            const sampleRows = [
+                {
+                    'CN Unit': 'HD785-12',
+                    'Type Unit': 'Dump Truck HD785',
+                    'Type CPE': 'Rajant BreadCrumb LX5',
+                    'Serial Number': 'RJT-2026-881',
+                    'IP Address': '10.20.12.15',
+                    'MSISDN': '628115400881',
+                    'Tanggal': new Date().toISOString().split('T')[0],
+                    'Status': 'Aktif',
+                    'PIC': 'Rizky Pratama'
+                },
+                {
+                    'CN Unit': 'RPT-TIMUR-02',
+                    'Type Unit': 'Repeater Portable',
+                    'Type CPE': 'Cambium ePMP 3000',
+                    'Serial Number': 'CMB-2026-442',
+                    'IP Address': '10.20.2.20',
+                    'MSISDN': '628115400442',
+                    'Tanggal': new Date().toISOString().split('T')[0],
+                    'Status': 'Ready',
+                    'PIC': 'Dimas Saputra'
+                }
+            ];
+
+            const worksheet = XLSX.utils.json_to_sheet(sampleRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Inventori_KPCS');
+            XLSX.writeFile(workbook, 'Template_Import_Inventori_Site_KPCS.xlsx');
+            showToast('Template Excel <strong>Template_Import_Inventori_Site_KPCS.xlsx</strong> berhasil diunduh.', 'success');
+        }
+
+        function previewExcelFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (typeof XLSX === 'undefined') {
+                showToast('Gagal memuat pembaca file Excel. Periksa koneksi internet Anda.', 'warning');
+                return;
+            }
+
+            document.getElementById('excelFileName').textContent = file.name;
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+                    const today = new Date().toISOString().split('T')[0];
+                    parsedExcelDevices = rows
+                        .map((row, idx) => {
+                            const getVal = (keys) => {
+                                const foundKey = Object.keys(row).find(k => keys.includes(k.trim().toLowerCase()));
+                                return foundKey ? String(row[foundKey]).trim() : '';
+                            };
+
+                            const cnUnit = getVal(['cn unit', 'cn', 'no lambung', 'unit', 'lokasi']);
+                            const typeCpe = getVal(['type cpe', 'cpe', 'nama perangkat', 'perangkat', 'model']);
+                            if (!cnUnit && !typeCpe) return null;
+
+                            const rawStatus = getVal(['status', 'kondisi', 'status kondisi']).toLowerCase();
+                            let status = 'Aktif';
+                            if (rawStatus.includes('ready') || rawStatus.includes('cadangan') || rawStatus.includes('reserve')) status = 'Ready';
+                            else if (rawStatus.includes('rusak') || rawStatus.includes('broken') || rawStatus.includes('offline')) status = 'Rusak';
+
+                            return {
+                                id: 'DEV-IMP-' + Date.now() + '-' + idx,
+                                cnUnit: (cnUnit || `UNIT-${100 + idx}`).toUpperCase(),
+                                typeUnit: getVal(['type unit', 'tipe unit', 'kategori', 'category']) || 'Heavy Equipment',
+                                typeCpe: typeCpe || 'Radio Mesh CPE',
+                                sn: (getVal(['serial number', 's/n', 'sn', 'serial']) || `SN-IMP-${1000 + idx}`).toUpperCase(),
+                                ip: getVal(['ip address', 'ip']) || '10.20.0.0',
+                                msisdn: getVal(['msisdn', 'no sim', 'nomor sim', 'sim card', 'sim', 'no hp']) || '-',
+                                date: getVal(['tanggal', 'tanggal pasang', 'tgl pasang', 'date']) || today,
+                                status: status,
+                                pic: getVal(['pic', 'teknisi', 'penanggung jawab']) || '-'
+                            };
+                        })
+                        .filter(Boolean);
+
+                    const previewBox = document.getElementById('excelPreviewBox');
+                    const btnConfirm = document.getElementById('btnConfirmImport');
+
+                    if (parsedExcelDevices.length === 0) {
+                        previewBox.classList.remove('hidden');
+                        document.getElementById('excelPreviewSummary').textContent = 'Tidak ditemukan baris perangkat yang valid.';
+                        document.getElementById('excelPreviewSample').textContent = 'Pastikan terdapat kolom "CN Unit" atau "Type CPE" pada sheet pertama.';
+                        btnConfirm.disabled = true;
+                        return;
+                    }
+
+                    previewBox.classList.remove('hidden');
+                    document.getElementById('excelPreviewSummary').textContent = `Siap mengimpor ${parsedExcelDevices.length} perangkat jaringan dari sheet "${firstSheetName}".`;
+                    document.getElementById('excelPreviewSample').textContent = `Contoh: ${parsedExcelDevices.slice(0, 3).map(d => `${d.cnUnit} (${d.typeCpe})`).join(', ')}`;
+                    btnConfirm.disabled = false;
+                } catch (err) {
+                    showToast('Format file Excel tidak valid atau rusak.', 'warning');
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function executeExcelImport() {
+            if (parsedExcelDevices.length === 0) return;
+
+            const mode = document.getElementById('importMode').value;
+            const totalImported = parsedExcelDevices.length;
+
+            if (mode === 'replace') {
+                devices = [...parsedExcelDevices];
+            } else {
+                devices = [...parsedExcelDevices, ...devices];
+            }
+
+            saveState();
+            closeModal('modalImportExcel');
+            showToast(`Berhasil mengimpor <strong>${totalImported} perangkat jaringan</strong> dari file Excel ke <strong>SITE KALIMANTAN - SITE KPCS</strong>.`, 'success');
+        }
+
+        // --- 11. JAM REALTIME & INISIALISASI ---
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('id-ID', { hour12: false });
+            document.getElementById('liveClock').textContent = `${timeStr} WITA`;
+        }
+
+        function refreshAllUI() {
+            renderDashboard();
+            renderInventory();
+            renderMaintenance();
+            renderSpareparts();
+        }
+
+        window.onload = function() {
+            refreshAllUI();
+            selectTopoNode('repeater-hill'); // Pilih node pusat sebagai default topologi
+            updateClock();
+            setInterval(updateClock, 1000);
+        };
+    </script>
+</body>
+</html>
