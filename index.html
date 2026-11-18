@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MineNet AI - Network & CPE Maintenance System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js for Dashboard Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (xlsx) for Excel Import/Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        cyber: {
+                            950: '#060913',
+                            900: '#0b1121',
+                            800: '#131c31',
+                            700: '#1e293b',
+                            accent: '#06b6d4',
+                            glow: '#3b82f6'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom AI Modern Visual Effects & Scrollbar */
+        body {
+            background-color: #060913;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: #f8fafc;
+        }
+
+        .glass-panel {
+            background: rgba(19, 28, 49, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+        }
+
+        .glass-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.65), rgba(15, 23, 42, 0.8));
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(6, 182, 212, 0.45);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .ai-glow-btn {
+            background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.35);
+            transition: all 0.2s ease;
+        }
+
+        .ai-glow-btn:hover {
+            box-shadow: 0 6px 22px rgba(6, 182, 212, 0.55);
+            filter: brightness(1.08);
+        }
+
+        .ai-pulse {
+            animation: pulseGlow 3s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.05); }
+        }
+
+        /* Custom Scrollbar for Mobile & Desktop Tables */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b1121;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #06b6d4;
+        }
+
+        /* Hide scrollbar for horizontal nav on mobile */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-white">
+
+    <!-- Top Navigation & Global Action Bar -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-cyan-500/20 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <!-- Brand Title -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30 ai-pulse">
+                        <i data-lucide="radio-tower" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg sm:text-xl font-bold tracking-tight bg-gradient-to-r from-white via-cyan-200 to-blue-400 bg-clip-text text-transparent">
+                            MineNet <span class="font-mono text-cyan-400">AI</span>
+                        </h1>
+                        <p class="text-xs text-slate-400">Mining Network & CPE Telemetry Ops</p>
+                    </div>
+                </div>
+                <!-- Mobile Offline Indicator -->
+                <span id="offline-badge" class="lg:hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Offline Ready
+                </span>
+            </div>
+
+            <!-- Global Search Input (CN Unit, IP Address, Serial Number) -->
+            <div class="relative flex-1 max-w-md w-full">
+                <i data-lucide="search" class="w-4 h-4 text-cyan-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                <input type="text" id="global-search" placeholder="Cari CN Unit, IP Address, atau Serial Number..." 
+                    class="w-full bg-slate-900/90 border border-slate-700/80 focus:border-cyan-400 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition">
+                <button id="clear-search" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                    <i data-lucide="x-circle" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Action Buttons: Export, Import, Delete All -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="exportToExcel()" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 transition active:scale-95">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span>Export Excel</span>
+                </button>
+                <label class="flex-1 sm:flex-none cursor-pointer inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 transition active:scale-95">
+                    <i data-lucide="upload" class="w-4 h-4"></i>
+                    <span>Import Excel</span>
+                    <input type="file" id="import-excel-input" accept=".xlsx, .xls, .csv" class="hidden" onchange="importFromExcel(event)">
+                </label>
+                <button onclick="confirmDeleteAll()" class="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 transition active:scale-95" title="Hapus Semua Data">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Delete All</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Horizontal Scrollable Navigation Tabs (Touch Friendly Medium Size) -->
+        <nav class="max-w-7xl mx-auto mt-3 pt-2 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="nav-btn active flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+            </button>
+            <button onclick="switchTab('populasi-active')" id="tab-populasi-active" class="nav-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition">
+                <i data-lucide="truck" class="w-4 h-4"></i> Populasi Active
+            </button>
+            <button onclick="switchTab('stok-ready')" id="tab-stok-ready" class="nav-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition">
+                <i data-lucide="package-check" class="w-4 h-4"></i> Stok CPE Ready
+            </button>
+            <button onclick="switchTab('cpe-rusak')" id="tab-cpe-rusak" class="nav-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition">
+                <i data-lucide="alert-triangle" class="w-4 h-4"></i> CPE Rusak
+            </button>
+            <button onclick="switchTab('preventive')" id="tab-preventive" class="nav-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition">
+                <i data-lucide="shield-check" class="w-4 h-4"></i> Preventive
+            </button>
+            <button onclick="switchTab('troubleshoot')" id="tab-troubleshoot" class="nav-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition">
+                <i data-lucide="wrench" class="w-4 h-4"></i> Troubleshoot & Replace
+            </button>
+            <button onclick="switchTab('installasi')" id="tab-installasi" class="nav-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i> Installasi
+            </button>
+            <button onclick="switchTab('dismantle')" id="tab-dismantle" class="nav-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition">
+                <i data-lucide="minus-circle" class="w-4 h-4"></i> Dismantle
+            </button>
+        </nav>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+
+        <!-- ==================== 1. DASHBOARD SECTION ==================== -->
+        <section id="view-dashboard" class="space-y-6">
+            <!-- Quick Action Banner for Field Mechanics -->
+            <div class="glass-panel rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-l-4 border-l-cyan-400">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 text-[11px] font-mono uppercase tracking-wider bg-cyan-500/20 text-cyan-300 rounded-md border border-cyan-500/30">AI Telemetry Sync</span>
+                        <span class="text-xs text-slate-400" id="last-updated-time">Siap digunakan offline</span>
+                    </div>
+                    <h2 class="text-base sm:text-lg font-semibold text-white mt-1">Ringkasan Operasional & Populasi Aset Jaringan</h2>
+                </div>
+                <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <button onclick="openModal('populasi-active')" class="flex-1 sm:flex-none ai-glow-btn px-4 py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 active:scale-95">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Tambah Populasi
+                    </button>
+                    <button onclick="openModal('troubleshoot')" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 border border-slate-600 px-4 py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 active:scale-95">
+                        <i data-lucide="wrench" class="w-4 h-4 text-amber-400"></i> Input Activity
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPI Metrics Grid (10 Key Metrics requested) -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+                <!-- 1. Total Populasi Unit -->
+                <div class="glass-card rounded-2xl p-4 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-cyan-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider text-slate-300">Total Populasi</span>
+                        <i data-lucide="layers" class="w-5 h-5"></i>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-bold font-mono text-white" id="stat-total-populasi">0</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Active + Ready + Rusak</p>
+                </div>
+
+                <!-- 2. Populasi Active -->
+                <div class="glass-card rounded-2xl p-4 cursor-pointer" onclick="switchTab('populasi-active')">
+                    <div class="flex items-center justify-between text-emerald-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider text-slate-300">Populasi Active</span>
+                        <i data-lucide="activity" class="w-5 h-5"></i>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-bold font-mono text-emerald-400" id="stat-active">0</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Unit beroperasi di pit</p>
+                </div>
+
+                <!-- 3. Stok CPE Ready -->
+                <div class="glass-card rounded-2xl p-4 cursor-pointer" onclick="switchTab('stok-ready')">
+                    <div class="flex items-center justify-between text-blue-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider text-slate-300">Stok CPE Ready</span>
+                        <i data-lucide="package-check" class="w-5 h-5"></i>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-bold font-mono text-blue-400" id="stat-ready">0</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Siap pasang / spare</p>
+                </div>
+
+                <!-- 4. CPE Rusak -->
+                <div class="glass-card rounded-2xl p-4 cursor-pointer" onclick="switchTab('cpe-rusak')">
+                    <div class="flex items-center justify-between text-rose-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider text-slate-300">CPE Rusak</span>
+                        <i data-lucide="alert-octagon" class="w-5 h-5"></i>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-bold font-mono text-rose-400" id="stat-rusak">0</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Perlu RMA / perbaikan</p>
+                </div>
+
+                <!-- 5. Daily Activity (Total Close) -->
+                <div class="glass-card rounded-2xl p-4">
+                    <div class="flex items-center justify-between text-purple-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider text-slate-300">Daily Activity</span>
+                        <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-bold font-mono text-purple-400" id="stat-daily-close">0</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Total unit status Close</p>
+                </div>
+
+                <!-- 6. Preventive -->
+                <div class="glass-card rounded-2xl p-4 cursor-pointer" onclick="switchTab('preventive')">
+                    <div class="flex items-center justify-between text-teal-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider text-slate-300">Preventive</span>
+                        <i data-lucide="shield-check" class="w-5 h-5"></i>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-bold font-mono text-white" id="stat-preventive">0</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Maintenance berkala</p>
+                </div>
+
+                <!-- 7. Troubleshoot -->
+                <div class="glass-card rounded-2xl p-4 cursor-pointer" onclick="switchTab('troubleshoot')">
+                    <div class="flex items-center justify-between text-amber-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider text-slate-300">Troubleshoot</span>
+                        <i data-lucide="wrench" class="w-5 h-5"></i>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-bold font-mono text-white" id="stat-troubleshoot">0</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Perbaikan gangguan</p>
+                </div>
+
+                <!-- 8. Installasi -->
+                <div class="glass-card rounded-2xl p-4 cursor-pointer" onclick="switchTab('installasi')">
+                    <div class="flex items-center justify-between text-sky-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider text-slate-300">Installasi</span>
+                        <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-bold font-mono text-white" id="stat-installasi">0</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Pemasangan unit baru</p>
+                </div>
+
+                <!-- 9. Dismantle -->
+                <div class="glass-card rounded-2xl p-4 cursor-pointer" onclick="switchTab('dismantle')">
+                    <div class="flex items-center justify-between text-orange-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider text-slate-300">Dismantle</span>
+                        <i data-lucide="minus-circle" class="w-5 h-5"></i>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-bold font-mono text-white" id="stat-dismantle">0</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Pelepasan perangkat</p>
+                </div>
+
+                <!-- 10. Replace CPE -->
+                <div class="glass-card rounded-2xl p-4 cursor-pointer" onclick="switchTab('troubleshoot')">
+                    <div class="flex items-center justify-between text-pink-400 mb-2">
+                        <span class="text-xs font-medium uppercase tracking-wider text-slate-300">Replace CPE</span>
+                        <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-bold font-mono text-pink-400" id="stat-replace">0</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Pergantian CPE rusak</p>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass-panel rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                            <i data-lucide="pie-chart" class="w-4 h-4 text-cyan-400"></i> Distribusi Populasi Aset CPE
+                        </h3>
+                        <span class="text-xs text-slate-400">Active vs Ready vs Rusak</span>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="populasiChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                            <i data-lucide="bar-chart-3" class="w-4 h-4 text-cyan-400"></i> Statistik Maintenance & Activity
+                        </h3>
+                        <span class="text-xs text-slate-400">Berdasarkan Kategori Pekerjaan</span>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== DYNAMIC DATA TABLE VIEW ==================== -->
+        <section id="view-table" class="hidden space-y-4">
+            <div class="glass-panel rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 id="table-title" class="text-lg sm:text-xl font-bold text-white">Judul Kategori</h2>
+                    <p id="table-subtitle" class="text-xs sm:text-sm text-slate-400">Deskripsi kategori data</p>
+                </div>
+                <button id="btn-add-record" onclick="openCurrentModal()" class="ai-glow-btn px-4 py-3 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 shadow-lg active:scale-95">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    <span id="btn-add-label">Tambah Data</span>
+                </button>
+            </div>
+
+            <!-- Responsive Table Wrapper -->
+            <div class="glass-panel rounded-2xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr id="table-head" class="bg-slate-900/90 border-b border-slate-700/80 text-xs font-semibold uppercase tracking-wider text-cyan-300">
+                                <!-- Dynamic Headers -->
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-slate-800/70 text-sm">
+                            <!-- Dynamic Rows -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="empty-state" class="hidden py-12 px-4 text-center">
+                    <div class="w-12 h-12 rounded-full bg-slate-800/80 flex items-center justify-center mx-auto mb-3 text-slate-400">
+                        <i data-lucide="database" class="w-6 h-6"></i>
+                    </div>
+                    <p class="text-slate-300 font-medium">Belum ada data ditemukan</p>
+                    <p class="text-xs text-slate-500 mt-1">Klik tombol Tambah Data atau Import Excel untuk mengisi data.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== MODAL FORM INPUT / EDIT ==================== -->
+    <div id="form-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="glass-panel w-full max-w-2xl rounded-2xl border border-cyan-500/30 shadow-2xl overflow-hidden my-auto">
+            <div class="px-5 py-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+                <h3 id="modal-title" class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="file-plus" class="w-5 h-5 text-cyan-400"></i> Form Input Data
+                </h3>
+                <button onclick="closeModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="dynamic-form" onsubmit="handleFormSubmit(event)" class="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+                <input type="hidden" id="edit-id">
+                <input type="hidden" id="form-category">
+                
+                <div id="form-fields" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Dynamic Form Fields Injected Here -->
+                </div>
+
+                <!-- Automation Notice Box -->
+                <div id="automation-hint" class="hidden p-3 rounded-xl bg-cyan-950/50 border border-cyan-500/30 text-xs text-cyan-200 flex items-start gap-2.5">
+                    <i data-lucide="cpu" class="w-4 h-4 text-cyan-400 shrink-0 mt-0.5"></i>
+                    <span id="automation-hint-text"></span>
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2.5 rounded-xl text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                        Batal
+                    </button>
+                    <button type="submit" class="ai-glow-btn px-5 py-2.5 rounded-xl text-sm font-medium text-white flex items-center gap-2 active:scale-95">
+                        <i data-lucide="save" class="w-4 h-4"></i> Simpan Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== CUSTOM CONFIRMATION & NOTIFICATION MODAL ==================== -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-6 border border-rose-500/30 text-center space-y-4">
+            <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <h3 id="confirm-title" class="text-lg font-bold text-white">Konfirmasi Hapus</h3>
+            <p id="confirm-message" class="text-sm text-slate-300">Apakah Anda yakin ingin menghapus data ini?</p>
+            <div class="flex items-center justify-center gap-3 pt-2">
+                <button onclick="closeConfirmModal()" class="flex-1 py-2.5 px-4 rounded-xl text-sm font-medium bg-slate-800 hover:bg-slate-700 text-white transition">
+                    Batal
+                </button>
+                <button id="confirm-yes-btn" class="flex-1 py-2.5 px-4 rounded-xl text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white transition">
+                    Ya, Hapus
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 hidden transform transition-all duration-300 translate-y-4 opacity-0">
+        <div class="glass-panel border-l-4 border-l-cyan-400 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+            <i data-lucide="sparkles" class="w-5 h-5 text-cyan-400"></i>
+            <span id="toast-msg" class="text-sm font-medium text-white">Notifikasi</span>
+        </div>
+    </div>
+
+    <script>
+        // ==================== DATA CONSTANTS & STORAGE ====================
+        const STORAGE_KEY = 'minenet_ai_maintenance_db_v1';
+
+        const UNIT_TYPES = [
+            'hd785', 'excavator', 'dozer', 'grader', 'smartfuel', 
+            'cctv', 'rover', 'radar', 'iot', 'water pump', 'mesin absensi'
+        ];
+
+        const CPE_TYPES = ['r5020-5g', 'r2110-4l', 'r3000'];
+
+        // Default Initial Data Structure
+        let db = {
+            populasiActive: [],
+            stokReady: [],
+            cpeRusak: [],
+            preventive: [],
+            troubleshoot: [],
+            installasi: [],
+            dismantle: []
+        };
+
+        let currentTab = 'dashboard';
+        let searchQuery = '';
+        let populasiChartInstance = null;
+        let activityChartInstance = null;
+
+        // ==================== INITIALIZATION ====================
+        window.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            lucide.createIcons();
+            updateNavStyles();
+            renderDashboard();
+
+            // Search Listener
+            const searchInput = document.getElementById('global-search');
+            const clearBtn = document.getElementById('clear-search');
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value.trim().toLowerCase();
+                clearBtn.classList.toggle('hidden', searchQuery === '');
+                if (currentTab === 'dashboard' && searchQuery !== '') {
+                    switchTab('populasi-active');
+                } else if (currentTab !== 'dashboard') {
+                    renderTable(currentTab);
+                }
+            });
+        });
+
+        // Load from localStorage (with sample data if completely empty on first launch)
+        function loadData() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                try {
+                    db = JSON.parse(raw);
+                } catch (e) {
+                    console.error('Error parsing storage:', e);
+                }
+            } else {
+                // Seed minimal realistic mining sample data for immediate usability
+                db = {
+                    populasiActive: [
+                        { id: '1', cnUnit: 'HD-78501', typeUnit: 'hd785', typeCpe: 'r5020-5g', serialNumber: 'SN50209901', ipAddress: '10.20.1.101', msisdn: '081255001101', status: 'Active', keterangan: 'Pit North Hauling' },
+                        { id: '2', cnUnit: 'EX-2004', typeUnit: 'excavator', typeCpe: 'r2110-4l', serialNumber: 'SN21108821', ipAddress: '10.20.1.102', msisdn: '081255001102', status: 'Active', keterangan: 'Loading Point B' }
+                    ],
+                    stokReady: [
+                        { id: '3', typeCpe: 'r5020-5g', serialNumber: 'SN50209988', ipAddress: '10.20.1.201', msisdn: '081255009988', status: 'Ready' },
+                        { id: '4', typeCpe: 'r3000', serialNumber: 'SN30007741', ipAddress: '10.20.1.202', msisdn: '081255007741', status: 'Ready' }
+                    ],
+                    cpeRusak: [
+                        { id: '5', typeCpe: 'r2110-4l', serialNumber: 'SN21104412', ipAddress: '10.20.1.205', msisdn: '081255004412', status: 'Rusak' }
+                    ],
+                    preventive: [
+                        { id: '6', cnUnit: 'HD-78501', typeUnit: 'hd785', typeCpe: 'r5020-5g', serialNumber: 'SN50209901', msisdn: '081255001101', reason: 'PM 500 Hours', action: 'Cleaning antena & cek RSSI', problemType: 'Preventive Routine', status: 'Close', pic: 'Budi Santoso' }
+                    ],
+                    troubleshoot: [],
+                    installasi: [],
+                    dismantle: []
+                };
+                saveData();
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+            document.getElementById('last-updated-time').textContent = 'Tersimpan lokal: ' + new Date().toLocaleTimeString('id-ID');
+            if (currentTab === 'dashboard') {
+                renderDashboard();
+            } else {
+                renderTable(currentTab);
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 10);
+            setTimeout(() => {
+                toast.classList.add('translate-y-4', 'opacity-0');
+                setTimeout(() => toast.classList.add('hidden'), 300);
+            }, 3000);
+        }
+
+        function clearSearch() {
+            document.getElementById('global-search').value = '';
+            searchQuery = '';
+            document.getElementById('clear-search').classList.add('hidden');
+            if (currentTab !== 'dashboard') renderTable(currentTab);
+        }
+
+        // ==================== NAVIGATION LOGIC ====================
+        function switchTab(tab) {
+            currentTab = tab;
+            updateNavStyles();
+
+            if (tab === 'dashboard') {
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                document.getElementById('view-table').classList.add('hidden');
+                renderDashboard();
+            } else {
+                document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('view-table').classList.remove('hidden');
+                renderTable(tab);
+            }
+            lucide.createIcons();
+        }
+
+        function updateNavStyles() {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.id === `tab-${currentTab}`) {
+                    btn.className = 'nav-btn active flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm shadow-cyan-500/20';
+                } else {
+                    btn.className = 'nav-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800/70 border border-transparent';
+                }
+            });
+        }
+
+        // ==================== DASHBOARD & CHARTS ====================
+        function renderDashboard() {
+            const activeCount = db.populasiActive.length;
+            const readyCount = db.stokReady.length;
+            const rusakCount = db.cpeRusak.length;
+            // Rule 1: Total populasi unit mengambil data dari populasi unit active, stok cpe ready, cpe rusak
+            const totalPopulasi = activeCount + readyCount + rusakCount;
+
+            const prevCount = db.preventive.length;
+            const tsCount = db.troubleshoot.length;
+            const instCount = db.installasi.length;
+            const dismCount = db.dismantle.length;
+
+            // Replace CPE count (from troubleshoot marked as Replace CPE)
+            const replaceCount = db.troubleshoot.filter(item => item.isReplace === 'Ya' || item.problemType?.toLowerCase().includes('replace')).length;
+
+            // Daily Activity: Total jumlah unit status Close across all activity logs
+            const allActivities = [...db.preventive, ...db.troubleshoot, ...db.installasi, ...db.dismantle];
+            const dailyCloseCount = allActivities.filter(item => item.status && item.status.toLowerCase() === 'close').length;
+
+            document.getElementById('stat-total-populasi').textContent = totalPopulasi;
+            document.getElementById('stat-active').textContent = activeCount;
+            document.getElementById('stat-ready').textContent = readyCount;
+            document.getElementById('stat-rusak').textContent = rusakCount;
+            document.getElementById('stat-daily-close').textContent = dailyCloseCount;
+            document.getElementById('stat-preventive').textContent = prevCount;
+            document.getElementById('stat-troubleshoot').textContent = tsCount;
+            document.getElementById('stat-installasi').textContent = instCount;
+            document.getElementById('stat-dismantle').textContent = dismCount;
+            document.getElementById('stat-replace').textContent = replaceCount;
+
+            updateCharts(activeCount, readyCount, rusakCount, prevCount, tsCount, instCount, dismCount, replaceCount);
+        }
+
+        function updateCharts(active, ready, rusak, prev, ts, inst, dism, rep) {
+            const ctx1 = document.getElementById('populasiChart').getContext('2d');
+            const ctx2 = document.getElementById('activityChart').getContext('2d');
+
+            if (populasiChartInstance) populasiChartInstance.destroy();
+            if (activityChartInstance) activityChartInstance.destroy();
+
+            populasiChartInstance = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Populasi Active', 'Stok CPE Ready', 'CPE Rusak'],
+                    datasets: [{
+                        data: [active, ready, rusak],
+                        backgroundColor: ['#10b981', '#3b82f6', '#f43f5e'],
+                        borderColor: '#0f172a',
+                        borderWidth: 3,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#cbd5e1', font: { family: 'Inter', size: 12 }, padding: 16 }
+                        }
+                    },
+                    cutout: '68%'
+                }
+            });
+
+            activityChartInstance = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['Preventive', 'Troubleshoot', 'Installasi', 'Dismantle', 'Replace CPE'],
+                    datasets: [{
+                        label: 'Jumlah Unit',
+                        data: [prev, ts, inst, dism, rep],
+                        backgroundColor: ['#14b8a6', '#f59e0b', '#0ea5e9', '#f97316', '#ec4899'],
+                        borderRadius: 8,
+                        barThickness: 28
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#94a3b8', stepSize: 1 },
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                        },
+                        x: {
+                            ticks: { color: '#cbd5e1', font: { size: 11 } },
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // ==================== TABLE CONFIGURATIONS & RENDERING ====================
+        const TAB_META = {
+            'populasi-active': {
+                key: 'populasiActive',
+                title: 'Populasi Unit Active & Form Populasi',
+                subtitle: 'Daftar seluruh unit tambang aktif yang terpasang perangkat CPE.',
+                btnLabel: 'Tambah Populasi Unit',
+                headers: ['CN Unit', 'Type Unit', 'Type CPE', 'Serial Number', 'IP Address', 'MSISDN', 'Status', 'Keterangan', 'Aksi']
+            },
+            'stok-ready': {
+                key: 'stokReady',
+                title: 'Stok CPE Ready (Spare)',
+                subtitle: 'Perangkat CPE siap pakai di workshop / gudang.',
+                btnLabel: 'Tambah Stok CPE',
+                headers: ['Type CPE', 'Serial Number', 'IP Address', 'MSISDN', 'Status', 'Aksi']
+            },
+            'cpe-rusak': {
+                key: 'cpeRusak',
+                title: 'Daftar CPE Rusak',
+                subtitle: 'Perangkat CPE bermasalah hasil replace lapangan atau temuan gudang.',
+                btnLabel: 'Tambah CPE Rusak',
+                headers: ['Type CPE', 'Serial Number', 'IP Address', 'MSISDN', 'Status', 'Aksi']
+            },
+            'preventive': {
+                key: 'preventive',
+                title: 'Preventive Maintenance',
+                subtitle: 'Log perawatan berkala jaringan & perangkat CPE pada unit tambang.',
+                btnLabel: 'Input Preventive',
+                headers: ['CN Unit', 'Type Unit', 'Type CPE', 'Serial Number', 'MSISDN', 'Reason', 'Action', 'Problem Type', 'Status', 'PIC', 'Aksi']
+            },
+            'troubleshoot': {
+                key: 'troubleshoot',
+                title: 'Troubleshoot & Replace CPE',
+                subtitle: 'Penanganan gangguan jaringan & pergantian CPE rusak otomatis.',
+                btnLabel: 'Input Troubleshoot',
+                headers: ['CN Unit', 'Type Unit', 'Type CPE', 'Serial Number', 'MSISDN', 'Reason', 'Action', 'Problem Type', 'Replace CPE', 'Status', 'PIC', 'Aksi']
+            },
+            'installasi': {
+                key: 'installasi',
+                title: 'Installasi Perangkat Baru',
+                subtitle: 'Pemasangan perangkat CPE pada unit tambang baru.',
+                btnLabel: 'Input Installasi',
+                headers: ['CN Unit', 'Type Unit', 'Type CPE', 'Serial Number', 'MSISDN', 'Reason', 'Action', 'Problem Type', 'Status', 'PIC', 'Aksi']
+            },
+            'dismantle': {
+                key: 'dismantle',
+                title: 'Dismantle Perangkat CPE',
+                subtitle: 'Pelepasan perangkat CPE dari unit (otomatis masuk ke Stok CPE Ready).',
+                btnLabel: 'Input Dismantle',
+                headers: ['CN Unit', 'Type Unit', 'Type CPE', 'Serial Number', 'MSISDN', 'Reason', 'Action', 'Problem Type', 'Status', 'PIC', 'Aksi']
+            }
+        };
+
+        function renderTable(tab) {
+            const meta = TAB_META[tab];
+            if (!meta) return;
+
+            document.getElementById('table-title').textContent = meta.title;
+            document.getElementById('table-subtitle').textContent = meta.subtitle;
+            document.getElementById('btn-add-label').textContent = meta.btnLabel;
+
+            // Render Headers
+            const thead = document.getElementById('table-head');
+            thead.innerHTML = meta.headers.map(h => `<th class="py-3.5 px-4 whitespace-nowrap">${h}</th>`).join('');
+
+            // Filter Data by Search Query (CN Unit, IP Address, Serial Number)
+            let items = db[meta.key] || [];
+            if (searchQuery) {
+                items = items.filter(item => 
+                    (item.cnUnit && item.cnUnit.toLowerCase().includes(searchQuery)) ||
+                    (item.ipAddress && item.ipAddress.toLowerCase().includes(searchQuery)) ||
+                    (item.serialNumber && item.serialNumber.toLowerCase().includes(searchQuery))
+                );
+            }
+
+            const tbody = document.getElementById('table-body');
+            const emptyState = document.getElementById('empty-state');
+
+            if (items.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            tbody.innerHTML = items.map(item => buildRowHTML(tab, item)).join('');
+            lucide.createIcons();
+        }
+
+        function getBadgeHTML(status) {
+            const s = (status || '').toLowerCase();
+            if (s === 'active' || s === 'close' || s === 'ready') {
+                return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">${status}</span>`;
+            }
+            if (s === 'rusak' || s === 'open') {
+                return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30">${status}</span>`;
+            }
+            return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">${status}</span>`;
+        }
+
+        function buildRowHTML(tab, item) {
+            const actionButtons = `
+                <td class="py-3 px-4 whitespace-nowrap">
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="editRecord('${tab}', '${item.id}')" class="p-2 rounded-lg bg-blue-500/15 text-blue-400 hover:bg-blue-500/30 transition" title="Edit">
+                            <i data-lucide="edit-3" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="deleteRecord('${tab}', '${item.id}')" class="p-2 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/30 transition" title="Hapus">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+
+            if (tab === 'populasi-active') {
+                return `<tr class="hover:bg-slate-800/40 transition">
+                    <td class="py-3 px-4 font-mono font-semibold text-cyan-300 whitespace-nowrap">${item.cnUnit || '-'}</td>
+                    <td class="py-3 px-4 uppercase text-xs font-medium text-slate-300 whitespace-nowrap">${item.typeUnit || '-'}</td>
+                    <td class="py-3 px-4 uppercase font-mono text-xs text-blue-300 whitespace-nowrap">${item.typeCpe || '-'}</td>
+                    <td class="py-3 px-4 font-mono text-xs text-white whitespace-nowrap">${item.serialNumber || '-'}</td>
+                    <td class="py-3 px-4 font-mono text-xs text-emerald-300 whitespace-nowrap">${item.ipAddress || '-'}</td>
+                    <td class="py-3 px-4 font-mono text-xs text-slate-300 whitespace-nowrap">${item.msisdn || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap">${getBadgeHTML(item.status)}</td>
+                    <td class="py-3 px-4 text-xs text-slate-400 max-w-xs truncate">${item.keterangan || '-'}</td>
+                    ${actionButtons}
+                </tr>`;
+            }
+
+            if (tab === 'stok-ready' || tab === 'cpe-rusak') {
+                return `<tr class="hover:bg-slate-800/40 transition">
+                    <td class="py-3 px-4 uppercase font-mono text-xs font-semibold text-blue-300 whitespace-nowrap">${item.typeCpe || '-'}</td>
+                    <td class="py-3 px-4 font-mono text-xs text-white whitespace-nowrap">${item.serialNumber || '-'}</td>
+                    <td class="py-3 px-4 font-mono text-xs text-emerald-300 whitespace-nowrap">${item.ipAddress || '-'}</td>
+                    <td class="py-3 px-4 font-mono text-xs text-slate-300 whitespace-nowrap">${item.msisdn || '-'}</td>
+                    <td class="py-3 px-4 whitespace-nowrap">${getBadgeHTML(item.status)}</td>
+                    ${actionButtons}
+                </tr>`;
+            }
+
+            // Activity Tables: preventive, troubleshoot, installasi, dismantle
+            const replaceCol = tab === 'troubleshoot' 
+                ? `<td class="py-3 px-4 whitespace-nowrap">${item.isReplace === 'Ya' ? '<span class="px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 border border-pink-500/30 text-xs font-semibold">Ya (Replaced)</span>' : '<span class="text-slate-500 text-xs">Tidak</span>'}</td>` 
+                : '';
+
+            return `<tr class="hover:bg-slate-800/40 transition">
+                <td class="py-3 px-4 font-mono font-semibold text-cyan-300 whitespace-nowrap">${item.cnUnit || '-'}</td>
+                <td class="py-3 px-4 uppercase text-xs font-medium text-slate-300 whitespace-nowrap">${item.typeUnit || '-'}</td>
+                <td class="py-3 px-4 uppercase font-mono text-xs text-blue-300 whitespace-nowrap">${item.typeCpe || '-'}</td>
+                <td class="py-3 px-4 font-mono text-xs text-white whitespace-nowrap">${item.serialNumber || '-'}</td>
+                <td class="py-3 px-4 font-mono text-xs text-slate-300 whitespace-nowrap">${item.msisdn || '-'}</td>
+                <td class="py-3 px-4 text-xs text-slate-300 max-w-[160px] truncate">${item.reason || '-'}</td>
+                <td class="py-3 px-4 text-xs text-slate-300 max-w-[160px] truncate">${item.action || '-'}</td>
+                <td class="py-3 px-4 text-xs text-amber-300 whitespace-nowrap">${item.problemType || '-'}</td>
+                ${replaceCol}
+                <td class="py-3 px-4 whitespace-nowrap">${getBadgeHTML(item.status)}</td>
+                <td class="py-3 px-4 text-xs font-medium text-white whitespace-nowrap">${item.pic || '-'}</td>
+                ${actionButtons}
+            </tr>`;
+        }
+
+        // ==================== DYNAMIC MODAL FORM ====================
+        function openCurrentModal() {
+            openModal(currentTab);
+        }
+
+        function openModal(tab, editItem = null) {
+            const modal = document.getElementById('form-modal');
+            const fieldsContainer = document.getElementById('form-fields');
+            const hintBox = document.getElementById('automation-hint');
+            const hintText = document.getElementById('automation-hint-text');
+
+            document.getElementById('edit-id').value = editItem ? editItem.id : '';
+            document.getElementById('form-category').value = tab;
+            document.getElementById('modal-title').innerHTML = `<i data-lucide="file-plus" class="w-5 h-5 text-cyan-400"></i> ${editItem ? 'Edit Data' : 'Input Data'} - ${TAB_META[tab].title}`;
+
+            // Show automation explanation for Replace CPE & Dismantle
+            if (tab === 'troubleshoot') {
+                hintBox.classList.remove('hidden');
+                hintText.textContent = 'Otomasi AI: Pilih CN Unit untuk mengisi otomatis Type Unit, CPE, SN & MSISDN. Jika "Replace CPE" dipilih Ya, CPE lama masuk ke CPE Rusak dan CPE pengganti diambil dari Stok Ready.';
+            } else if (tab === 'dismantle') {
+                hintBox.classList.remove('hidden');
+                hintText.textContent = 'Otomasi AI: Pilih CN Unit dari Populasi Active. Saat disimpan, unit dihapus dari Populasi Active dan CPE otomatis masuk ke Stok CPE Ready.';
+            } else if (tab === 'installasi') {
+                hintBox.classList.remove('hidden');
+                hintText.textContent = 'Otomasi AI: Data unit baru hasil installasi otomatis ditambahkan ke daftar Populasi Active (dan mengurangi Stok CPE Ready jika SN cocok).';
+            } else if (tab === 'preventive') {
+                hintBox.classList.remove('hidden');
+                hintText.textContent = 'Tips Cepat: Pilih CN Unit pada kolom pencarian unit untuk mengisi otomatis Type Unit, Type CPE, Serial Number, dan MSISDN.';
+            } else {
+                hintBox.classList.add('hidden');
+            }
+
+            fieldsContainer.innerHTML = generateFormFields(tab, editItem);
+            modal.classList.remove('hidden');
+            lucide.createIcons();
+
+            // Attach listener for Replace CPE dropdown if in troubleshoot
+            if (tab === 'troubleshoot') {
+                const replaceSelect = document.getElementById('field-isReplace');
+                if (replaceSelect) {
+                    replaceSelect.addEventListener('change', toggleReplaceFields);
+                    toggleReplaceFields();
+                }
+            }
+        }
+
+        // Auto-fill detail unit saat mekanik memilih/mengetik CN Unit di form Preventive, Troubleshoot, Installasi, atau Dismantle
+        function handleCnUnitAutoFill(cnVal) {
+            if (!cnVal) return;
+            const foundUnit = db.populasiActive.find(u => u.cnUnit && u.cnUnit.toLowerCase() === cnVal.trim().toLowerCase());
+            if (foundUnit) {
+                const setIfExists = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el && val) el.value = val;
+                };
+                setIfExists('field-typeUnit', foundUnit.typeUnit);
+                setIfExists('field-typeCpe', foundUnit.typeCpe);
+                setIfExists('field-serialNumber', foundUnit.serialNumber);
+                setIfExists('field-msisdn', foundUnit.msisdn);
+                showToast(`Data unit ${foundUnit.cnUnit} terisi otomatis!`);
+            }
+        }
+
+        // Auto-fill detail CPE dari Stok Ready saat input Installasi
+        function handleReadyCpeAutoFill(snVal) {
+            if (!snVal) return;
+            const foundCpe = db.stokReady.find(c => c.serialNumber && c.serialNumber.toLowerCase() === snVal.trim().toLowerCase());
+            if (foundCpe) {
+                const setIfExists = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el && val) el.value = val;
+                };
+                setIfExists('field-typeCpe', foundCpe.typeCpe);
+                setIfExists('field-ipAddress', foundCpe.ipAddress);
+                setIfExists('field-msisdn', foundCpe.msisdn);
+                showToast(`Stok CPE ${foundCpe.serialNumber} ditemukan!`);
+            }
+        }
+
+        function toggleReplaceFields() {
+            const val = document.getElementById('field-isReplace')?.value;
+            const replacementWrapper = document.getElementById('replacement-cpe-wrapper');
+            if (replacementWrapper) {
+                replacementWrapper.classList.toggle('hidden', val !== 'Ya');
+            }
+        }
+
+        function generateFormFields(tab, data) {
+            const v = (key, def = '') => data && data[key] !== undefined ? data[key] : def;
+
+            const unitOptions = UNIT_TYPES.map(u => `<option value="${u}" ${v('typeUnit') === u ? 'selected' : ''}>${u.toUpperCase()}</option>`).join('');
+            const cpeOptions = CPE_TYPES.map(c => `<option value="${c}" ${v('typeCpe') === c ? 'selected' : ''}>${c.toUpperCase()}</option>`).join('');
+
+            const inputClass = "w-full bg-slate-900/90 border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none";
+            const labelClass = "block text-xs font-medium text-slate-300 mb-1.5";
+
+            if (tab === 'populasi-active') {
+                return `
+                    <div>
+                        <label class="${labelClass}">CN Unit *</label>
+                        <input type="text" id="field-cnUnit" required value="${v('cnUnit')}" placeholder="Contoh: HD-78505" class="${inputClass}">
+                    </div>
+                    <div>
+                        <label class="${labelClass}">Type Unit *</label>
+                        <select id="field-typeUnit" class="${inputClass}">${unitOptions}</select>
+                    </div>
+                    <div>
+                        <label class="${labelClass}">Type CPE *</label>
+                        <select id="field-typeCpe" class="${inputClass}">${cpeOptions}</select>
+                    </div>
+                    <div>
+                        <label class="${labelClass}">Serial Number *</label>
+                        <input type="text" id="field-serialNumber" required value="${v('serialNumber')}" placeholder="SN Perangkat" class="${inputClass}">
+                    </div>
+                    <div>
+                        <label class="${labelClass}">IP Address *</label>
+                        <input type="text" id="field-ipAddress" required value="${v('ipAddress')}" placeholder="10.20.x.x" class="${inputClass}">
+                    </div>
+                    <div>
+                        <label class="${labelClass}">MSISDN (No SIM)</label>
+                        <input type="text" id="field-msisdn" value="${v('msisdn')}" placeholder="0812xxxx" class="${inputClass}">
+                    </div>
+                    <div>
+                        <label class="${labelClass}">Status</label>
+                        <select id="field-status" class="${inputClass}">
+                            <option value="Active" ${v('status') === 'Active' ? 'selected' : ''}>Active</option>
+                            <option value="Standby" ${v('status') === 'Standby' ? 'selected' : ''}>Standby</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="${labelClass}">Keterangan</label>
+                        <input type="text" id="field-keterangan" value="${v('keterangan')}" placeholder="Lokasi pit / catatan" class="${inputClass}">
+                    </div>
+                `;
+            }
+
+            if (tab === 'stok-ready' || tab === 'cpe-rusak') {
+                const defaultStatus = tab === 'stok-ready' ? 'Ready' : 'Rusak';
+                return `
+                    <div>
+                        <label class="${labelClass}">Type CPE *</label>
+                        <select id="field-typeCpe" class="${inputClass}">${cpeOptions}</select>
+                    </div>
+                    <div>
+                        <label class="${labelClass}">Serial Number *</label>
+                        <input type="text" id="field-serialNumber" required value="${v('serialNumber')}" placeholder="SN Perangkat" class="${inputClass}">
+                    </div>
+                    <div>
+                        <label class="${labelClass}">IP Address</label>
+                        <input type="text" id="field-ipAddress" value="${v('ipAddress')}" placeholder="10.20.x.x" class="${inputClass}">
+                    </div>
+                    <div>
+                        <label class="${labelClass}">MSISDN</label>
+                        <input type="text" id="field-msisdn" value="${v('msisdn')}" placeholder="0812xxxx" class="${inputClass}">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="${labelClass}">Status</label>
+                        <input type="text" id="field-status" value="${v('status', defaultStatus)}" readonly class="${inputClass} opacity-75">
+                    </div>
+                `;
+            }
+
+            // Activity Tabs: preventive, troubleshoot, installasi, dismantle
+            const activeUnitOptions = db.populasiActive.map(u => 
+                `<option value="${u.cnUnit}">${u.cnUnit} (${u.typeUnit.toUpperCase()} - SN: ${u.serialNumber})</option>`
+            ).join('');
+
+            const readyCpeDatalist = db.stokReady.map(c => 
+                `<option value="${c.serialNumber}">${c.typeCpe.toUpperCase()} - IP: ${c.ipAddress || '-'} - MSISDN: ${c.msisdn || '-'}</option>`
+            ).join('');
+
+            const readyCpeOptions = db.stokReady.map(c => 
+                `<option value="${c.id}">${c.typeCpe.toUpperCase()} - SN: ${c.serialNumber} (IP: ${c.ipAddress || '-'} | ${c.msisdn || 'No SIM'})</option>`
+            ).join('');
+
+            const replaceBlock = tab === 'troubleshoot' ? `
+                <div>
+                    <label class="${labelClass}">Replace CPE?</label>
+                    <select id="field-isReplace" class="${inputClass}">
+                        <option value="Tidak" ${v('isReplace') !== 'Ya' ? 'selected' : ''}>Tidak</option>
+                        <option value="Ya" ${v('isReplace') === 'Ya' ? 'selected' : ''}>Ya (Ganti Perangkat CPE)</option>
+                    </select>
+                </div>
+                <div id="replacement-cpe-wrapper" class="hidden sm:col-span-2 p-3 rounded-xl bg-slate-900 border border-pink-500/30">
+                    <label class="${labelClass} text-pink-300">Pilih CPE Pengganti dari Stok Ready</label>
+                    <select id="field-replacementCpeId" class="${inputClass}">
+                        <option value="">-- Pilih CPE Ready Pengganti (Opsional) --</option>
+                        ${readyCpeOptions}
+                    </select>
+                </div>
+            ` : '';
+
+            const ipFieldForInstall = tab === 'installasi' ? `
+                <div>
+                    <label class="${labelClass}">IP Address Baru (Untuk Populasi Active)</label>
+                    <input type="text" id="field-ipAddress" value="${v('ipAddress')}" placeholder="Contoh: 10.20.1.150" class="${inputClass}">
+                </div>
+            ` : '';
+
+            return `
+                <div>
+                    <label class="${labelClass}">CN Unit * <span class="text-[11px] text-cyan-400">(Pilih / Ketik)</span></label>
+                    <input type="text" id="field-cnUnit" list="active-units-list" required value="${v('cnUnit')}" 
+                        onchange="handleCnUnitAutoFill(this.value)" placeholder="Pilih atau ketik CN Unit..." class="${inputClass}">
+                    <datalist id="active-units-list">${activeUnitOptions}</datalist>
+                </div>
+                <div>
+                    <label class="${labelClass}">Type Unit *</label>
+                    <select id="field-typeUnit" class="${inputClass}">${unitOptions}</select>
+                </div>
+                <div>
+                    <label class="${labelClass}">Type CPE *</label>
+                    <select id="field-typeCpe" class="${inputClass}">${cpeOptions}</select>
+                </div>
+                <div>
+                    <label class="${labelClass}">Serial Number ${tab === 'installasi' ? '(Pilih dari Stok Ready / Ketik)' : '(CPE Terpasang)'} *</label>
+                    <input type="text" id="field-serialNumber" ${tab === 'installasi' ? 'list="ready-cpe-list" onchange="handleReadyCpeAutoFill(this.value)"' : ''} 
+                        required value="${v('serialNumber')}" placeholder="SN Perangkat" class="${inputClass}">
+                    ${tab === 'installasi' ? `<datalist id="ready-cpe-list">${readyCpeDatalist}</datalist>` : ''}
+                </div>
+                <div>
+                    <label class="${labelClass}">MSISDN</label>
+                    <input type="text" id="field-msisdn" value="${v('msisdn')}" placeholder="0812xxxx" class="${inputClass}">
+                </div>
+                ${ipFieldForInstall}
+                <div>
+                    <label class="${labelClass}">Problem Type *</label>
+                    <input type="text" id="field-problemType" required value="${v('problemType', tab === 'preventive' ? 'Preventive Routine' : tab === 'installasi' ? 'New Installation' : tab === 'dismantle' ? 'Unit Dismantle' : '')}" 
+                        placeholder="Contoh: No Signal / Hang / PM 500H" class="${inputClass}">
+                </div>
+                <div>
+                    <label class="${labelClass}">Reason *</label>
+                    <input type="text" id="field-reason" required value="${v('reason')}" placeholder="Penyebab gangguan / alasan pekerjaan" class="${inputClass}">
+                </div>
+                <div>
+                    <label class="${labelClass}">Action *</label>
+                    <input type="text" id="field-action" required value="${v('action')}" placeholder="Tindakan yang dilakukan" class="${inputClass}">
+                </div>
+                <div>
+                    <label class="${labelClass}">Status Pekerjaan</label>
+                    <select id="field-status" class="${inputClass}">
+                        <option value="Close" ${v('status', 'Close') === 'Close' ? 'selected' : ''}>Close</option>
+                        <option value="Open" ${v('status') === 'Open' ? 'selected' : ''}>Open / Progress</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="${labelClass}">PIC (Mekanik / Teknisi) *</label>
+                    <input type="text" id="field-pic" required value="${v('pic')}" placeholder="Nama Teknisi" class="${inputClass}">
+                </div>
+                ${replaceBlock}
+            `;
+        }
+
+        function closeModal() {
+            document.getElementById('form-modal').classList.add('hidden');
+        }
+
+        // ==================== FORM SUBMIT & AUTOMATION LOGIC (RULE 16) ====================
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const tab = document.getElementById('form-category').value;
+            const editId = document.getElementById('edit-id').value;
+            const meta = TAB_META[tab];
+
+            const getVal = (id) => {
+                const el = document.getElementById(id);
+                return el ? el.value.trim() : '';
+            };
+
+            let payload = { id: editId || Date.now().toString() };
+
+            if (tab === 'populasi-active') {
+                payload = {
+                    ...payload,
+                    cnUnit: getVal('field-cnUnit'),
+                    typeUnit: getVal('field-typeUnit'),
+                    typeCpe: getVal('field-typeCpe'),
+                    serialNumber: getVal('field-serialNumber'),
+                    ipAddress: getVal('field-ipAddress'),
+                    msisdn: getVal('field-msisdn'),
+                    status: getVal('field-status'),
+                    keterangan: getVal('field-keterangan')
+                };
+            } else if (tab === 'stok-ready' || tab === 'cpe-rusak') {
+                payload = {
+                    ...payload,
+                    typeCpe: getVal('field-typeCpe'),
+                    serialNumber: getVal('field-serialNumber'),
+                    ipAddress: getVal('field-ipAddress'),
+                    msisdn: getVal('field-msisdn'),
+                    status: getVal('field-status')
+                };
+            } else {
+                payload = {
+                    ...payload,
+                    cnUnit: getVal('field-cnUnit'),
+                    typeUnit: getVal('field-typeUnit'),
+                    typeCpe: getVal('field-typeCpe'),
+                    serialNumber: getVal('field-serialNumber'),
+                    msisdn: getVal('field-msisdn'),
+                    reason: getVal('field-reason'),
+                    action: getVal('field-action'),
+                    problemType: getVal('field-problemType'),
+                    status: getVal('field-status'),
+                    pic: getVal('field-pic')
+                };
+
+                if (tab === 'installasi') {
+                    payload.ipAddress = getVal('field-ipAddress');
+                }
+
+                if (tab === 'troubleshoot') {
+                    payload.isReplace = getVal('field-isReplace');
+                }
+            }
+
+            // Save or Update Main Record
+            if (editId) {
+                const idx = db[meta.key].findIndex(i => i.id === editId);
+                if (idx !== -1) db[meta.key][idx] = payload;
+                showToast('Perubahan data berhasil disimpan!');
+            } else {
+                db[meta.key].unshift(payload);
+
+                // === RULE 16: AUTOMATION FOR REPLACE CPE, INSTALLASI & DISMANTLE ===
+                if (tab === 'troubleshoot' && payload.isReplace === 'Ya') {
+                    // Ambil data IP Address lama dari Populasi Active jika tersedia
+                    const activeUnitBeforeReplace = db.populasiActive.find(u => u.cnUnit && u.cnUnit.toLowerCase() === payload.cnUnit.toLowerCase());
+                    const oldIp = activeUnitBeforeReplace ? activeUnitBeforeReplace.ipAddress : '';
+
+                    // 1. Masukkan CPE lama ke daftar CPE Rusak (hindari duplikat SN)
+                    const existsInRusak = db.cpeRusak.some(c => c.serialNumber && c.serialNumber.toLowerCase() === payload.serialNumber.toLowerCase());
+                    if (!existsInRusak && payload.serialNumber) {
+                        db.cpeRusak.unshift({
+                            id: 'rusak-' + Date.now(),
+                            typeCpe: payload.typeCpe,
+                            serialNumber: payload.serialNumber,
+                            ipAddress: oldIp,
+                            msisdn: payload.msisdn,
+                            status: 'Rusak'
+                        });
+                    }
+
+                    // 2. Jika memilih CPE pengganti dari Stok Ready, pindahkan ke Populasi Active unit tsb
+                    const replacementId = getVal('field-replacementCpeId');
+                    if (replacementId) {
+                        const readyIdx = db.stokReady.findIndex(r => r.id === replacementId);
+                        if (readyIdx !== -1) {
+                            const newCpe = db.stokReady[readyIdx];
+                            db.stokReady.splice(readyIdx, 1);
+
+                            // Update unit di populasiActive jika ada
+                            if (activeUnitBeforeReplace) {
+                                activeUnitBeforeReplace.typeCpe = newCpe.typeCpe;
+                                activeUnitBeforeReplace.serialNumber = newCpe.serialNumber;
+                                if (newCpe.ipAddress) activeUnitBeforeReplace.ipAddress = newCpe.ipAddress;
+                                activeUnitBeforeReplace.msisdn = newCpe.msisdn || activeUnitBeforeReplace.msisdn;
+                            }
+                        }
+                    }
+                    showToast('Replace CPE selesai: CPE lama masuk CPE Rusak & unit diperbarui!');
+                } else if (tab === 'installasi') {
+                    // Ambil IP Address dari Stok Ready jika user tidak mengisi IP baru secara manual
+                    const readyCpe = db.stokReady.find(c => c.serialNumber && c.serialNumber.toLowerCase() === (payload.serialNumber || '').toLowerCase());
+                    const finalIp = payload.ipAddress || (readyCpe ? readyCpe.ipAddress : '') || '-';
+
+                    // 1. Hapus dari Stok CPE Ready jika SN yang dipasang berasal dari Stok Ready
+                    if (payload.serialNumber) {
+                        db.stokReady = db.stokReady.filter(c => c.serialNumber.toLowerCase() !== payload.serialNumber.toLowerCase());
+                    }
+                    // 2. Tambahkan atau perbarui unit di Populasi Active
+                    const existingActive = db.populasiActive.find(u => u.cnUnit && u.cnUnit.toLowerCase() === payload.cnUnit.toLowerCase());
+                    if (existingActive) {
+                        existingActive.typeUnit = payload.typeUnit;
+                        existingActive.typeCpe = payload.typeCpe;
+                        existingActive.serialNumber = payload.serialNumber;
+                        existingActive.msisdn = payload.msisdn || existingActive.msisdn;
+                        if (finalIp !== '-') existingActive.ipAddress = finalIp;
+                        existingActive.status = 'Active';
+                    } else {
+                        db.populasiActive.unshift({
+                            id: 'active-' + Date.now(),
+                            cnUnit: payload.cnUnit,
+                            typeUnit: payload.typeUnit,
+                            typeCpe: payload.typeCpe,
+                            serialNumber: payload.serialNumber,
+                            ipAddress: finalIp,
+                            msisdn: payload.msisdn,
+                            status: 'Active',
+                            keterangan: `Installed by ${payload.pic}`
+                        });
+                    }
+                    showToast('Installasi selesai: Unit otomatis ditambahkan ke Populasi Active!');
+                } else if (tab === 'dismantle') {
+                    // Ambil data IP Address unit sebelum dilepas dari Populasi Active
+                    const dismantledUnit = db.populasiActive.find(u => 
+                        (u.serialNumber || '').toLowerCase() === (payload.serialNumber || '').toLowerCase() ||
+                        (u.cnUnit || '').toLowerCase() === (payload.cnUnit || '').toLowerCase()
+                    );
+                    const unitIp = dismantledUnit ? dismantledUnit.ipAddress : '';
+
+                    // 1. Masukkan perangkat ke Stok CPE Ready (hindari duplikat SN)
+                    const existsInReady = db.stokReady.some(c => c.serialNumber && c.serialNumber.toLowerCase() === payload.serialNumber.toLowerCase());
+                    if (payload.serialNumber && !existsInReady) {
+                        db.stokReady.unshift({
+                            id: 'ready-' + Date.now(),
+                            typeCpe: payload.typeCpe,
+                            serialNumber: payload.serialNumber,
+                            ipAddress: unitIp,
+                            msisdn: payload.msisdn,
+                            status: 'Ready'
+                        });
+                    }
+                    // 2. Hapus dari Populasi Active berdasarkan SN atau CN Unit yang cocok
+                    db.populasiActive = db.populasiActive.filter(u => 
+                        (u.serialNumber || '').toLowerCase() !== (payload.serialNumber || '').toLowerCase() &&
+                        (u.cnUnit || '').toLowerCase() !== (payload.cnUnit || '').toLowerCase()
+                    );
+                    showToast('Dismantle selesai: Unit dilepas & CPE masuk ke Stok Ready!');
+                } else {
+                    showToast('Data berhasil disimpan ke sistem!');
+                }
+            }
+
+            saveData();
+            closeModal();
+        }
+
+        function editRecord(tab, id) {
+            const meta = TAB_META[tab];
+            const item = db[meta.key].find(i => i.id === id);
+            if (item) openModal(tab, item);
+        }
+
+        function deleteRecord(tab, id) {
+            const meta = TAB_META[tab];
+            showConfirm('Hapus Data', 'Yakin ingin menghapus baris data ini?', () => {
+                db[meta.key] = db[meta.key].filter(i => i.id !== id);
+                saveData();
+                showToast('Data berhasil dihapus.');
+            });
+        }
+
+        // ==================== RULE 18: DELETE ALL DATA ====================
+        function confirmDeleteAll() {
+            showConfirm(
+                'Hapus Semua Data (Delete All)',
+                'PERINGATAN: Seluruh data Populasi, Stok CPE, CPE Rusak, dan Log Activity akan dihapus permanen dari browser ini. Lanjutkan?',
+                () => {
+                    db = {
+                        populasiActive: [],
+                        stokReady: [],
+                        cpeRusak: [],
+                        preventive: [],
+                        troubleshoot: [],
+                        installasi: [],
+                        dismantle: []
+                    };
+                    saveData();
+                    showToast('Semua data telah dibersihkan (Reset Total).');
+                }
+            );
+        }
+
+        function showConfirm(title, message, onYes) {
+            const modal = document.getElementById('confirm-modal');
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            const yesBtn = document.getElementById('confirm-yes-btn');
+            yesBtn.onclick = () => {
+                onYes();
+                closeConfirmModal();
+            };
+            modal.classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+        }
+
+        // ==================== RULE 13: EXPORT & IMPORT EXCEL ====================
+        function exportToExcel() {
+            try {
+                const wb = XLSX.utils.book_new();
+
+                const sheets = [
+                    { name: 'Populasi_Active', data: db.populasiActive },
+                    { name: 'Stok_CPE_Ready', data: db.stokReady },
+                    { name: 'CPE_Rusak', data: db.cpeRusak },
+                    { name: 'Preventive', data: db.preventive },
+                    { name: 'Troubleshoot', data: db.troubleshoot },
+                    { name: 'Installasi', data: db.installasi },
+                    { name: 'Dismantle', data: db.dismantle }
+                ];
+
+                sheets.forEach(s => {
+                    const ws = XLSX.utils.json_to_sheet(s.data.length ? s.data : [{}]);
+                    XLSX.utils.book_append_sheet(wb, ws, s.name);
+                });
+
+                const fileName = `MineNet_Maintenance_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+                showToast('Export Excel berhasil diunduh!');
+            } catch (err) {
+                console.error(err);
+                showToast('Gagal melakukan export Excel.');
+            }
+        }
+
+        function importFromExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+
+                    const sheetMap = {
+                        'Populasi_Active': 'populasiActive',
+                        'Stok_CPE_Ready': 'stokReady',
+                        'CPE_Rusak': 'cpeRusak',
+                        'Preventive': 'preventive',
+                        'Troubleshoot': 'troubleshoot',
+                        'Installasi': 'installasi',
+                        'Dismantle': 'dismantle'
+                    };
+
+                    // Normalisasi nama kolom dari berbagai variasi header Excel (misal: "CN Unit", "cn_unit", "Serial Number", dll.)
+                    function normalizeExcelRow(row, targetKey, index) {
+                        const cleanObj = {};
+                        Object.keys(row).forEach(k => {
+                            const normKey = k.toLowerCase().replace(/[\s_\-\(\)\/\.]+/g, '');
+                            cleanObj[normKey] = row[k] !== null && row[k] !== undefined ? String(row[k]).trim() : '';
+                        });
+
+                        const pick = (...keys) => {
+                            for (const k of keys) {
+                                if (cleanObj[k] !== undefined && cleanObj[k] !== '') return cleanObj[k];
+                            }
+                            return '';
+                        };
+
+                        const base = {
+                            id: pick('id') || `${Date.now()}-${targetKey}-${index}-${Math.floor(Math.random() * 1000)}`
+                        };
+
+                        if (targetKey === 'populasiActive') {
+                            return {
+                                ...base,
+                                cnUnit: pick('cnunit', 'cn', 'unit', 'kodeunit'),
+                                typeUnit: (pick('typeunit', 'tipeunit', 'jenisunit') || 'hd785').toLowerCase(),
+                                typeCpe: (pick('typecpe', 'tipecpe', 'jeniscpe', 'cpe') || 'r5020-5g').toLowerCase(),
+                                serialNumber: pick('serialnumber', 'sn', 'serial', 'noserial'),
+                                ipAddress: pick('ipaddress', 'ip', 'alamatip'),
+                                msisdn: pick('msisdn', 'nosim', 'simcard', 'nomor', 'nohp'),
+                                status: pick('status') || 'Active',
+                                keterangan: pick('keterangan', 'ket', 'catatan', 'notes', 'lokasi')
+                            };
+                        }
+
+                        if (targetKey === 'stokReady' || targetKey === 'cpeRusak') {
+                            const defStatus = targetKey === 'stokReady' ? 'Ready' : 'Rusak';
+                            return {
+                                ...base,
+                                typeCpe: (pick('typecpe', 'tipecpe', 'jeniscpe', 'cpe') || 'r5020-5g').toLowerCase(),
+                                serialNumber: pick('serialnumber', 'sn', 'serial', 'noserial'),
+                                ipAddress: pick('ipaddress', 'ip', 'alamatip'),
+                                msisdn: pick('msisdn', 'nosim', 'simcard', 'nomor', 'nohp'),
+                                status: pick('status') || defStatus
+                            };
+                        }
+
+                        // Activity logs: preventive, troubleshoot, installasi, dismantle
+                        const activityItem = {
+                            ...base,
+                            cnUnit: pick('cnunit', 'cn', 'unit', 'kodeunit'),
+                            typeUnit: (pick('typeunit', 'tipeunit', 'jenisunit') || 'hd785').toLowerCase(),
+                            typeCpe: (pick('typecpe', 'tipecpe', 'jeniscpe', 'cpe') || 'r5020-5g').toLowerCase(),
+                            serialNumber: pick('serialnumber', 'sn', 'serial', 'noserial'),
+                            msisdn: pick('msisdn', 'nosim', 'simcard', 'nomor', 'nohp'),
+                            reason: pick('reason', 'penyebab', 'alasan'),
+                            action: pick('action', 'tindakan', 'perbaikan'),
+                            problemType: pick('problemtype', 'problem', 'masalah', 'jenismasalah'),
+                            status: pick('status') || 'Close',
+                            pic: pick('pic', 'mekanik', 'teknisi')
+                        };
+
+                        if (targetKey === 'troubleshoot') {
+                            const repVal = pick('isreplace', 'replacecpe', 'replace').toLowerCase();
+                            activityItem.isReplace = (repVal === 'ya' || repVal === 'yes' || repVal === 'true' || repVal === '1') ? 'Ya' : 'Tidak';
+                        }
+
+                        return activityItem;
+                    }
+
+                    // Cek apakah baris benar-benar berisi data penting (bukan baris kosong hasil export)
+                    function hasValidData(item, targetKey) {
+                        if (targetKey === 'stokReady' || targetKey === 'cpeRusak') {
+                            return Boolean(item.serialNumber || item.msisdn);
+                        }
+                        return Boolean(item.cnUnit || item.serialNumber || item.ipAddress);
+                    }
+
+                    let importedCount = 0;
+
+                    workbook.SheetNames.forEach(sheetName => {
+                        // Cocokkan nama sheet secara fleksibel (case-insensitive & abaikan spasi/underscore)
+                        const normalizedSheet = sheetName.toLowerCase().replace(/[\s_\-]+/g, '');
+                        let targetKey = sheetMap[sheetName];
+                        if (!targetKey) {
+                            if (normalizedSheet.includes('populasi')) targetKey = 'populasiActive';
+                            else if (normalizedSheet.includes('ready') || normalizedSheet.includes('stok')) targetKey = 'stokReady';
+                            else if (normalizedSheet.includes('rusak')) targetKey = 'cpeRusak';
+                            else if (normalizedSheet.includes('preventive')) targetKey = 'preventive';
+                            else if (normalizedSheet.includes('troubleshoot')) targetKey = 'troubleshoot';
+                            else if (normalizedSheet.includes('install')) targetKey = 'installasi';
+                            else if (normalizedSheet.includes('dismantle')) targetKey = 'dismantle';
+                        }
+
+                        if (targetKey) {
+                            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+                            const mappedRows = rows
+                                .map((r, idx) => normalizeExcelRow(r, targetKey, idx))
+                                .filter(item => hasValidData(item, targetKey));
+
+                            if (mappedRows.length > 0) {
+                                // Gabungkan data baru sambil menghindari duplikat ID
+                                const existingIds = new Set(db[targetKey].map(d => d.id));
+                                const uniqueNewRows = mappedRows.filter(m => !existingIds.has(m.id));
+                                db[targetKey] = [...uniqueNewRows, ...db[targetKey]];
+                                importedCount += uniqueNewRows.length;
+                            }
+                        }
+                    });
+
+                    // Fallback jika user mengimport file Excel single-sheet dengan nama sheet bebas (misal: "Sheet1")
+                    if (importedCount === 0 && workbook.SheetNames.length > 0) {
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+                        const targetKey = currentTab === 'dashboard' ? 'populasiActive' : TAB_META[currentTab].key;
+                        const mappedRows = rows
+                            .map((r, idx) => normalizeExcelRow(r, targetKey, idx))
+                            .filter(item => hasValidData(item, targetKey));
+
+                        if (mappedRows.length > 0) {
+                            db[targetKey] = [...mappedRows, ...db[targetKey]];
+                            importedCount = mappedRows.length;
+                        }
+                    }
+
+                    saveData();
+                    if (importedCount > 0) {
+                        showToast(`Berhasil import ${importedCount} baris data dari Excel!`);
+                    } else {
+                        showToast('Tidak ada data baru atau kolom wajib (CN Unit / Serial Number) kosong.');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showToast('Format file Excel tidak valid.');
+                }
+                event.target.value = '';
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    </script>
+</body>
+</html>
